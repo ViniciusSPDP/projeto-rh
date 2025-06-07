@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Candidatos {
+  idCandidato                       BigInt    @id(map: "candidatos_pkey") @default(autoincrement())
+  created_at                        DateTime  @default(now()) @db.Timestamptz(6)
+  nomeCandidato                     String?
+  cpfCandidato                      String?
+  rgCandidato                       String?
+  sexoCandidato                     String?
+  estadocivilCandidato              String?
+  cnhCandidato                      String?
+  outrosexoCandidato                String?
+  categoriacnhCandidato             String?
+  emailCandidato                    String?
+  datanascimentoCandidato           DateTime? @db.Date
+  linkedinCandidato                 String?
+  facebookCandidato                 String?
+  instagramCandidato                String?
+  telefoneCandidato                 String?
+  telefone2Candidato                String?
+  pcdCandidato                      String?
+  cidareacandidato                  String?
+  cepCandidato                      String?
+  ruaCandidato                      String?
+  numeroCandidato                   String?
+  bairroCandidato                   String?
+  cidadeCandidato                   String?
+  estadoCandidato                   String?
+  vagainteresseCandidato            String?
+  escolaridadeCandidato             String?
+  conhecimentosCandidato            String?
+  wordCandidato                     String?
+  excelCandidato                    String?
+  powerpointCandidato               String?
+  conhecimentosinformaticaCandidato String?
+  conhecimentoinfcandidato          String?
+  possuiexperienciaCandidato        String?
+  empresaCandidato                  String?
+  local1Candidato                   String?
+  atividadesdesenvolvidas1Candidato String?
+  datainicioCandidato               DateTime? @db.Date
+  trabalha1Candidato                String?
+  datafinalCandidato                DateTime? @db.Date
+  empresa2Candidato                 String?
+  local2Candidato                   String?
+  atividadesdesenvolvidas2Candidato String?
+  datainicio2Candidato              DateTime? @db.Date
+  trabalha2Candidato                String?
+  datafinal2Candidato               DateTime? @db.Date
+  empresa3Candidato                 String?
+  local3Candidato                   String?
+  atividadesdesenvolvidas3Candidato String?
+  datainicio3Candidato              DateTime? @db.Date
+  trabalha3Candidato                String?
+  datafinal3Candidato               DateTime? @db.Date
+  fotoCandidato                     String?
+  parentescoCandidato               String?
+  graudeparentescoenomeCandidato    String?
+  datacadastroCandidato             DateTime? @db.Date
+  situacaoCandidato                 String?
+  opcionalCandidato                 String?
+}
+
+model usuario {
+  id         Int       @id @default(autoincrement())
+  nome       String
+  email      String    @unique
+  senhahash  String
+  autorizado Boolean?  @default(false)
+  fotourl    String?
+  criadoem   DateTime? @default(now()) @db.Timestamp(6)
+
+  @@map("usuario")
+}
