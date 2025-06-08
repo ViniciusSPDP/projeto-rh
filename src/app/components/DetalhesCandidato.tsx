@@ -90,7 +90,7 @@ export default function DetalhesCandidato({ candidato }: { candidato: any }) {
                             <div className="sm:ml-auto text-sm text-right">
                                 <p className='text-blue-100'>Cadastrado em:</p>
                                 <p className="font-medium text-blue-100">
-                                    {formatarData(candidato.datacadastroCandidato)}
+                                    {formatarData(candidato.created_at)}
                                 </p>
                             </div>
                         </div>

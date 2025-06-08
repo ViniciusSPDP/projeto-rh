@@ -1,103 +1,99 @@
-import Image from "next/image";
+// src/app/page.tsx
 
-export default function Home() {
+import Link from 'next/link'
+import { ArrowRight, Briefcase, Users, PieChart, Zap } from 'lucide-react'
+
+// Para manter o código organizado, podemos criar pequenos componentes aqui mesmo.
+// Se eles crescerem, podem ser movidos para a pasta /components.
+
+// Componente para o Cabeçalho
+const Header = () => (
+  <header className="bg-white/80 backdrop-blur-md fixed top-0 left-0 right-0 z-50 border-b border-slate-200">
+    <div className="container mx-auto px-6 py-4 flex justify-between items-center">
+      <Link href="/" className="flex items-center gap-2">
+        <Briefcase className="h-7 w-7 text-indigo-600" />
+        <span className="text-xl font-bold text-slate-800">RH System</span>
+      </Link>
+      <nav>
+        <Link 
+          href="/login"
+          className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors shadow-sm"
+        >
+          Entrar
+        </Link>
+      </nav>
+    </div>
+  </header>
+);
+
+// Componente para a Seção de Funcionalidades
+const FeatureCard = ({ icon: Icon, title, children }: { icon: React.ElementType, title: string, children: React.ReactNode }) => (
+  <div className="bg-white p-6 rounded-lg shadow-md border border-slate-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+    <div className="flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 text-indigo-600 mb-4">
+      <Icon className="h-6 w-6" />
+    </div>
+    <h3 className="text-lg font-semibold text-slate-900 mb-2">{title}</h3>
+    <p className="text-slate-600 text-sm leading-relaxed">{children}</p>
+  </div>
+);
+
+
+// --- Componente Principal da Página (Landing Page) ---
+export default function LandingPage() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="bg-slate-50 text-slate-800">
+      <Header />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
+      <main>
+        {/* Seção Hero */}
+        <section className="relative pt-32 pb-24 md:pt-48 md:pb-32 text-center bg-gradient-to-b from-white to-indigo-50">
+           <div className="container mx-auto px-6">
+              <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-slate-900 mb-6">
+                A plataforma completa para gerenciar seus talentos.
+              </h1>
+              <p className="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto mb-10">
+                Otimize seu RH, do recrutamento à gestão de candidatos. Centralize vagas, analise perfis e tome decisões mais inteligentes com nossa plataforma intuitiva.
+              </p>
+              <div className="flex justify-center items-center gap-4">
+                  <Link 
+                    href="/login"
+                    className="inline-flex items-center justify-center gap-2 bg-indigo-600 text-white px-8 py-3 rounded-lg text-base font-semibold hover:bg-indigo-700 transition-transform transform hover:scale-105 shadow-lg"
+                  >
+                    <span>Começar Agora</span>
+                    <ArrowRight className="h-5 w-5" />
+                  </Link>
+              </div>
+           </div>
+        </section>
+
+        {/* Seção de Funcionalidades */}
+        <section id="features" className="py-20 bg-white">
+          <div className="container mx-auto px-6">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900">Tudo que você precisa em um só lugar</h2>
+              <p className="mt-4 text-lg text-slate-600">Ferramentas poderosas para simplificar seu dia a dia.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <FeatureCard icon={Briefcase} title="Gestão de Vagas Simplificada">
+                Crie, gerencie e encerre vagas com um fluxo de trabalho claro e organizado. Acompanhe o status de cada processo seletivo em tempo real.
+              </FeatureCard>
+              <FeatureCard icon={Users} title="Central de Candidatos">
+                Tenha um banco de talentos unificado. Filtre, selecione e mova candidatos entre as etapas do processo com facilidade.
+              </FeatureCard>
+              <FeatureCard icon={PieChart} title="Análise e Relatórios">
+                Obtenha insights valiosos sobre seus processos de recrutamento para tomar decisões baseadas em dados e otimizar suas contratações.
+              </FeatureCard>
+            </div>
+          </div>
+        </section>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+
+      {/* Rodapé */}
+      <footer className="bg-slate-900 text-slate-400 py-6">
+        <div className="container mx-auto px-6 text-center text-sm">
+          <p>&copy; {new Date().getFullYear()} RH System. Todos os direitos reservados.</p>
+        </div>
       </footer>
     </div>
-  );
+  )
 }

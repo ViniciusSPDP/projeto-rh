@@ -1,176 +1,153 @@
+// src/app/components/Menu.tsx
+
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Menu as MenuIcon, X, LogOut, User, Settings, ChevronDown, Bell, Search } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { useSession, signOut } from 'next-auth/react'
+import { Menu as MenuIcon, X, LogOut, User, Settings, ChevronDown, Bell, Search, Briefcase, Users } from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
 
 export default function Menu() {
-  const [isOpen, setIsOpen] = useState(false)
-  const [showProfile, setShowProfile] = useState(false)
-  const [activeItem, setActiveItem] = useState('dashboard')
-  const profileRef = useRef(null)
-  const mobileMenuRef = useRef(null)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
+  
+  const pathname = usePathname()
+  const router = useRouter()
+  const { data: session } = useSession()
 
-  const toggleMenu = () => setIsOpen(!isOpen)
-  const toggleProfile = () => setShowProfile(!showProfile)
+  const profileRef = useRef<HTMLDivElement>(null)
+  const mobileMenuRef = useRef<HTMLDivElement>(null)
 
-  // Fecha o menu mobile ao clicar fora
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
-        setIsOpen(false)
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setIsProfileOpen(false)
       }
-      if (profileRef.current && !profileRef.current.contains(event.target)) {
-        setShowProfile(false)
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+        setIsMobileMenuOpen(false)
+      }
+    }
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsMobileMenuOpen(false)
+        setIsProfileOpen(false)
       }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  // Fecha menus ao pressionar ESC
-  useEffect(() => {
-    const handleEscKey = (event) => {
-      if (event.key === 'Escape') {
-        setIsOpen(false)
-        setShowProfile(false)
-      }
-    }
-
     document.addEventListener('keydown', handleEscKey)
-    return () => document.removeEventListener('keydown', handleEscKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscKey)
+    }
   }, [])
-
-  // Simula dados do usuário logado
-  const user = {
-    name: 'Vinicius Saraiva',
-    email: 'vinicius_saraiva2012@hotmail.com',
-    photo: '/user-placeholder.png',
-    notifications: 3
-  }
+  
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', href: '/' },
-    { id: 'candidatos', label: 'Candidatos', href: '/candidatos' },
-    { id: 'relatorios', label: 'Relatórios', href: '/relatorios' },
-    { id: 'configuracoes', label: 'Configurações', href: '/configuracoes' }
+    { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: Briefcase },
+    { id: 'vagas', label: 'Vagas', href: '/vagas', icon: Briefcase },
+    { id: 'candidatos', label: 'Candidatos', href: '/candidatos', icon: Users },
   ]
-
-  const handleItemClick = (itemId) => {
-    setActiveItem(itemId)
-    setIsOpen(false)
+  
+  const handleSignOut = async () => {
+    await signOut({ redirect: true, callbackUrl: '/login' });
   }
 
+  if (!session) {
+    return null;
+  }
+  
+  const user = session.user;
+
   return (
-    <>
-      <header className="bg-gradient-to-r from-blue-700 to-blue-800 text-white shadow-lg sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <div className="flex items-center gap-3">
-              <div className="text-2xl font-bold bg-white text-blue-700 px-3 py-1 rounded-lg">
-                LOGO
-              </div>
-            </div>
-
-            {/* Barra de busca - Desktop */}
-            <div className="hidden lg:flex flex-1 max-w-md mx-8">
-              <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-200" size={18} />
-                <input
-                  type="text"
-                  placeholder="Buscar..."
-                  className="w-full pl-10 pr-4 py-2 bg-blue-600 border border-blue-500 rounded-lg text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            {/* Menu Desktop */}
-            <nav className="hidden md:flex items-center gap-1">
+    <header className="bg-white text-slate-800 shadow-md sticky top-0 z-40 border-b border-slate-200">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          
+          <div className="flex items-center gap-6">
+            <Link href="/dashboard" className="flex items-center gap-2 flex-shrink-0">
+              <Briefcase className="h-7 w-7 text-indigo-600" />
+              <span className="text-xl font-bold text-slate-800 hidden sm:block">RH System</span>
+            </Link>
+            <nav className="hidden md:flex items-center gap-2">
               {menuItems.map((item) => (
-                <a
+                <Link
                   key={item.id}
                   href={item.href}
-                  onClick={() => setActiveItem(item.id)}
-                  className={`px-4 py-2 rounded-lg transition-all duration-200 ${
-                    activeItem === item.id
-                      ? 'bg-white text-blue-700 font-semibold'
-                      : 'hover:bg-blue-600 hover:text-white'
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    pathname.startsWith(item.href)
+                      ? 'bg-indigo-50 text-indigo-600'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                 >
                   {item.label}
-                </a>
+                </Link>
               ))}
             </nav>
+          </div>
 
-            {/* Área do usuário - Desktop */}
-            <div className="hidden md:flex items-center gap-3">
-              {/* Notificações */}
-              <button className="relative p-2 hover:bg-blue-600 rounded-lg transition-colors">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <button className="relative p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors">
                 <Bell size={20} />
-                {user.notifications > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                    {user.notifications}
-                  </span>
-                )}
               </button>
+              
+              <div className="h-6 w-px bg-slate-200" />
 
-              {/* Perfil do usuário */}
               <div className="relative" ref={profileRef}>
                 <button
-                  onClick={toggleProfile}
-                  className="flex items-center gap-2 p-2 hover:bg-blue-600 rounded-lg transition-colors"
-                  aria-expanded={showProfile}
-                  aria-haspopup="true"
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  className="flex items-center gap-2 p-1 hover:bg-slate-100 rounded-full transition-colors"
                 >
+                  {/* --- ALTERAÇÃO 1 AQUI --- */}
                   <Image
-                    src={user.photo}
+                    src={'/user-placeholder.png'}
                     alt="Foto do usuário"
                     width={32}
                     height={32}
-                    className="rounded-full border-2 border-white"
+                    className="rounded-full"
                   />
-                  <span className="font-medium hidden lg:block">{user.name.split(' ')[0]}</span>
+                  <span className="font-semibold text-sm text-slate-700 hidden lg:block">{user?.name?.split(' ')[0]}</span>
                   <ChevronDown 
                     size={16} 
-                    className={`transition-transform duration-200 ${showProfile ? 'rotate-180' : ''}`}
+                    className={`text-slate-500 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`}
                   />
                 </button>
 
-                {/* Dropdown do perfil */}
-                {showProfile && (
-                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-50">
-                    <div className="px-4 py-3 border-b border-gray-100">
+                {isProfileOpen && (
+                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-2xl border border-slate-200 py-2 z-50 animate-fade-in">
+                    <div className="px-4 py-3 border-b border-slate-100">
                       <div className="flex items-center gap-3">
+                        {/* --- ALTERAÇÃO 2 AQUI --- */}
                         <Image
-                          src={user.photo}
+                          src={'/user-placeholder.png'}
                           alt="Foto do usuário"
                           width={48}
                           height={48}
                           className="rounded-full"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-gray-900 truncate">{user.name}</div>
-                          <div className="text-sm text-gray-500 truncate">{user.email}</div>
+                          <div className="font-semibold text-gray-900 truncate">{user?.name}</div>
+                          <div className="text-sm text-gray-500 truncate">{user?.email}</div>
                         </div>
                       </div>
                     </div>
                     
                     <div className="py-1">
-                      <button className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors">
-                        <User size={18} />
+                      <Link href="/perfil" onClick={() => setIsProfileOpen(false)} className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors">
+                        <User size={16} />
                         <span>Minha Conta</span>
-                      </button>
-                      <button className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors">
-                        <Settings size={18} />
-                        <span>Configurações</span>
-                      </button>
+                      </Link>
                     </div>
                     
-                    <div className="border-t border-gray-100 pt-1">
-                      <button className="w-full flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition-colors">
-                        <LogOut size={18} />
+                    <div className="border-t border-slate-100 pt-1">
+                      <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition-colors">
+                        <LogOut size={16} />
                         <span>Sair</span>
                       </button>
                     </div>
@@ -179,95 +156,36 @@ export default function Menu() {
               </div>
             </div>
 
-            {/* Botão Mobile */}
             <button 
-              className="md:hidden p-2 hover:bg-blue-600 rounded-lg transition-colors" 
-              onClick={toggleMenu}
-              aria-expanded={isOpen}
-              aria-label="Menu principal"
+              className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
-              {isOpen ? <X size={24} /> : <MenuIcon size={24} />}
+              {isMobileMenuOpen ? <X size={24} /> : <MenuIcon size={24} />}
             </button>
           </div>
-
-          {/* Barra de busca - Mobile */}
-          <div className="mt-3 lg:hidden">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-200" size={18} />
-              <input
-                type="text"
-                placeholder="Buscar..."
-                className="w-full pl-10 pr-4 py-2 bg-blue-600 border border-blue-500 rounded-lg text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent"
-              />
-            </div>
-          </div>
         </div>
+      </div>
 
-        {/* Menu Mobile */}
-        {isOpen && (
-          <div 
-            ref={mobileMenuRef}
-            className="md:hidden bg-blue-800 border-t border-blue-600 shadow-lg"
-          >
-            <nav className="px-4 py-3 space-y-1">
-              {menuItems.map((item) => (
-                <a
-                  key={item.id}
-                  href={item.href}
-                  onClick={() => handleItemClick(item.id)}
-                  className={`block px-4 py-3 rounded-lg transition-all duration-200 ${
-                    activeItem === item.id
-                      ? 'bg-white text-blue-700 font-semibold'
-                      : 'text-blue-100 hover:bg-blue-700 hover:text-white'
-                  }`}
-                >
-                  {item.label}
-                </a>
-              ))}
-            </nav>
-            
-            {/* Área do usuário - Mobile */}
-            <div className="border-t border-blue-600 px-4 py-3">
-              <div className="flex items-center gap-3 mb-3">
-                <Image
-                  src={user.photo}
-                  alt="Foto do usuário"
-                  width={40}
-                  height={40}
-                  className="rounded-full border-2 border-white"
-                />
-                <div className="flex-1">
-                  <div className="font-medium text-white">{user.name}</div>
-                  <div className="text-sm text-blue-200">{user.email}</div>
-                </div>
-                <button className="relative p-2 hover:bg-blue-700 rounded-lg">
-                  <Bell size={18} />
-                  {user.notifications > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
-                      {user.notifications}
-                    </span>
-                  )}
-                </button>
-              </div>
-              
-              <div className="space-y-1">
-                <button className="w-full flex items-center gap-3 px-4 py-2 text-blue-100 hover:bg-blue-700 rounded-lg transition-colors">
-                  <User size={18} />
-                  <span>Minha Conta</span>
-                </button>
-                <button className="w-full flex items-center gap-3 px-4 py-2 text-blue-100 hover:bg-blue-700 rounded-lg transition-colors">
-                  <Settings size={18} />
-                  <span>Configurações</span>
-                </button>
-                <button className="w-full flex items-center gap-3 px-4 py-2 text-red-300 hover:bg-red-600 hover:text-white rounded-lg transition-colors">
-                  <LogOut size={18} />
-                  <span>Sair</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </header>
-    </>
+      {isMobileMenuOpen && (
+        <div ref={mobileMenuRef} className="md:hidden bg-white border-t border-slate-200 shadow-lg">
+          <nav className="px-4 py-3 space-y-1">
+            {menuItems.map((item) => (
+              <Link
+                key={item.id}
+                href={item.href}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  pathname.startsWith(item.href)
+                    ? 'bg-indigo-50 text-indigo-600 font-semibold'
+                    : 'text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <item.icon size={20} />
+                <span>{item.label}</span>
+              </Link>
+            ))}
+          </nav>
+        </div>
+      )}
+    </header>
   )
 }

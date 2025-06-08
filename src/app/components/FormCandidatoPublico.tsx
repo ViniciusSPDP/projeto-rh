@@ -62,7 +62,7 @@ function ExperienciaFields({ index, formData, handleChange }: { index: number, f
 
 
 // --- Componente Principal ---
-export default function FormCandidatoPublico({ vagaId }: { vagaId: number }) {
+export default function FormCandidatoPublico({ vagaId }: { vagaId?: number }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>('pessoal');
@@ -75,6 +75,9 @@ export default function FormCandidatoPublico({ vagaId }: { vagaId: number }) {
     excelCandidato: 'Desconheço', 
     powerpointCandidato: 'Desconheço', 
     conhecimentosinformaticaCandidato: [] as string[], conhecimentoinfcandidato: '', possuiexperienciaCandidato: '', empresaCandidato: '', local1Candidato: '', atividadesdesenvolvidas1Candidato: '', datainicioCandidato: '', trabalha1Candidato: '', datafinalCandidato: '', empresa2Candidato: '', local2Candidato: '', atividadesdesenvolvidas2Candidato: '', datainicio2Candidato: '', trabalha2Candidato: '', datafinal2Candidato: '', empresa3Candidato: '', local3Candidato: '', atividadesdesenvolvidas3Candidato: '', datainicio3Candidato: '', trabalha3Candidato: '', datafinal3Candidato: '', fotoCandidato: '', parentescoCandidato: '', graudeparentescoenomeCandidato: '',
+      // --- ALTERAÇÃO 1: Definindo um valor padrão para os campos de parentesco ---
+    parentescoCandidato: 'Não', 
+    graudeparentescoenomeCandidato: '',
   });
 
   const handleTabNavigation = (direction: 'next' | 'prev') => {
@@ -97,6 +100,8 @@ export default function FormCandidatoPublico({ vagaId }: { vagaId: number }) {
         setFormData(prev => ({
             ...prev,
             [name]: value,
+            // --- ALTERAÇÃO 2: Lógica para limpar o campo de parente ao selecionar 'Não' ---
+            ...(name === 'parentescoCandidato' && value === 'Não' ? { graudeparentescoenomeCandidato: '' } : {}),
             ...(name === 'pcdCandidato' && value === 'Não' ? { cidareacandidato: '' } : {}),
             ...(name === 'sexoCandidato' && value !== 'Outro' ? { outrosexoCandidato: '' } : {}),
             ...(name === 'possuiexperienciaCandidato' && value === 'Não' ? { empresaCandidato: '', local1Candidato: '', atividadesdesenvolvidas1Candidato: '', datainicioCandidato: '', trabalha1Candidato: '', datafinalCandidato: '', empresa2Candidato: '', local2Candidato: '', atividadesdesenvolvidas2Candidato: '', datainicio2Candidato: '', trabalha2Candidato: '', datafinal2Candidato: '', empresa3Candidato: '', local3Candidato: '', atividadesdesenvolvidas3Candidato: '', datainicio3Candidato: '', trabalha3Candidato: '', datafinal3Candidato: '' } : {}),
@@ -134,6 +139,7 @@ export default function FormCandidatoPublico({ vagaId }: { vagaId: number }) {
       escolaridadeCandidato: { label: 'Escolaridade', tab: 'formacao' },
       vagainteresseCandidato: { label: 'Vaga de Interesse', tab: 'formacao' },
       possuiexperienciaCandidato: { label: 'Possui experiência profissional?', tab: 'experiencia' },
+    
     };
 
     for (const field in requiredFields) {
@@ -151,6 +157,15 @@ export default function FormCandidatoPublico({ vagaId }: { vagaId: number }) {
       setActiveTab('pessoal');
       return false;
     }
+
+        // --- ALTERAÇÃO 3: Adicionando a validação para o campo de parentesco ---
+    if (formData.parentescoCandidato === 'Sim' && !formData.graudeparentescoenomeCandidato) {
+      toast.error('Por favor, informe o nome e grau de parentesco.');
+      setActiveTab('pessoal');
+      return false;
+    }
+
+
     if (formData.cnhCandidato === 'Sim' && !formData.categoriacnhCandidato) {
       toast.error('O campo "Categoria CNH" é obrigatório.');
       setActiveTab('documentos');
@@ -175,7 +190,7 @@ export default function FormCandidatoPublico({ vagaId }: { vagaId: number }) {
     return true;
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => { 
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => { 
     e.preventDefault(); 
     if (!validateForm()) {
       return;
@@ -183,26 +198,44 @@ export default function FormCandidatoPublico({ vagaId }: { vagaId: number }) {
 
     setLoading(true); 
     try { 
-      const res = await fetch('/api/candidatos/publico', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...formData, conhecimentosinformaticaCandidato: formData.conhecimentosinformaticaCandidato.join(', '), vagaId, situacaoCandidato: 'Em processo' }), }); 
+      // --- AQUI ESTÁ A LÓGICA ---
+      // 1. Decidimos qual status usar com base na existência do vagaId
+      const situacaoDoCandidato = vagaId ? 'Em processo' : 'Em análise';
+
+      // 2. Construímos o corpo da requisição com o status correto
+      const bodyParaApi = { 
+        ...formData, 
+        conhecimentosinformaticaCandidato: formData.conhecimentosinformaticaCandidato.join(', '), 
+        vagaId, // Será undefined se for do banco de talentos, o que é correto
+        situacaoCandidato: situacaoDoCandidato // Usamos a variável com a lógica
+      };
+
+      const res = await fetch('/api/candidatos/publico', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify(bodyParaApi), 
+      }); 
+      
       if (res.ok) { 
-        // Toast de sucesso!
-        toast.success('Candidatura enviada com sucesso!');
+        toast.success('Inscrição realizada com sucesso!');
         router.push(`/obrigado`); 
       } else { 
         const errorData = await res.json();
-        // Toast de erro da API
-        toast.error(errorData.error || 'Erro ao enviar candidatura.');
-        throw new Error(errorData.error || 'Erro ao enviar candidatura.'); 
+        toast.error(errorData.error || 'Erro ao realizar inscrição.');
+        throw new Error(errorData.error || 'Erro ao realizar inscrição.'); 
       } 
     } catch (error) { 
-      console.error(error); 
+      console.error(error);
+      if (!(error instanceof Error && (await (e.target as any).json()).ok === false)) {
+          toast.error('Ocorreu um erro de comunicação.');
+      }
     } finally { 
       setLoading(false); 
     } 
   };
 
   return (
-    <div className="mx-auto max-w-5xl rounded-lg bg-white p-6 shadow-xl sm:p-8"><div className="mb-8 text-center"><h1 className="text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">Formulário de Candidatura</h1><p className="mt-2 text-gray-600">Preencha os campos abaixo para se candidatar à vaga.</p></div><div className="mb-8 flex items-start justify-center">{TABS_CONFIG.map((tab, index) => (<div key={tab.id} className="flex flex-1 items-center"><div className="flex flex-col items-center" ><button onClick={() => setActiveTab(tab.id)} className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all sm:h-12 sm:w-12 ${activeTab === tab.id ? 'border-indigo-600 bg-indigo-600 text-white' : TABS_CONFIG.findIndex(t => t.id === activeTab) > index ? 'border-indigo-600 bg-white text-indigo-600' : 'border-gray-300 bg-white text-gray-400 hover:border-gray-400'}`}>{TABS_CONFIG.findIndex(t => t.id === activeTab) > index ? <CheckCircle size={24} /> : <tab.icon size={20} />}</button><p className={`mt-2 hidden text-center text-xs font-medium sm:block sm:text-sm ${activeTab === tab.id || TABS_CONFIG.findIndex(t => t.id === activeTab) > index ? 'text-indigo-600' : 'text-gray-500'}`}>{tab.label}</p></div>{index < TABS_CONFIG.length - 1 && <div className={`mt-5 h-0.5 flex-1 sm:mt-6 ${TABS_CONFIG.findIndex(t => t.id === activeTab) > index ? 'bg-indigo-600' : 'bg-gray-200'}`}></div>}</div>))}</div>
+    <div className="mx-auto max-w-5xl rounded-lg bg-white p-6 shadow-xl sm:p-8 min-h-screen"><div className="mb-8 text-center"><h1 className="text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">Formulário de Candidatura</h1><p className="mt-2 text-gray-600">Preencha os campos abaixo para se candidatar à vaga.</p></div><div className="mb-8 flex items-start justify-center">{TABS_CONFIG.map((tab, index) => (<div key={tab.id} className="flex flex-1 items-center"><div className="flex flex-col items-center" ><button onClick={() => setActiveTab(tab.id)} className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all sm:h-12 sm:w-12 ${activeTab === tab.id ? 'border-indigo-600 bg-indigo-600 text-white' : TABS_CONFIG.findIndex(t => t.id === activeTab) > index ? 'border-indigo-600 bg-white text-indigo-600' : 'border-gray-300 bg-white text-gray-400 hover:border-gray-400'}`}>{TABS_CONFIG.findIndex(t => t.id === activeTab) > index ? <CheckCircle size={24} /> : <tab.icon size={20} />}</button><p className={`mt-2 hidden text-center text-xs font-medium sm:block sm:text-sm ${activeTab === tab.id || TABS_CONFIG.findIndex(t => t.id === activeTab) > index ? 'text-indigo-600' : 'text-gray-500'}`}>{tab.label}</p></div>{index < TABS_CONFIG.length - 1 && <div className={`mt-5 h-0.5 flex-1 sm:mt-6 ${TABS_CONFIG.findIndex(t => t.id === activeTab) > index ? 'bg-indigo-600' : 'bg-gray-200'}`}></div>}</div>))}</div>
       <form onSubmit={handleSubmit} noValidate className="space-y-12">
         {/* O restante do seu JSX permanece exatamente o mesmo */}
         {activeTab === 'pessoal' && (<section><h2 className="text-xl font-semibold text-gray-700 border-b pb-4 mb-6">Dados Pessoais e Contato</h2><div className="grid grid-cols-1 gap-x-6 gap-y-8 md:grid-cols-6"><div className="col-span-full"><label className="block text-sm font-medium leading-6 text-gray-900">Foto de Perfil</label><div className="mt-2 flex items-center gap-x-3">{photoPreview ? <div className="relative"><img src={photoPreview} alt="Prévia" className="h-24 w-24 rounded-full object-cover" /><button type="button" onClick={removePhoto} className="absolute -right-1 -top-1 rounded-full bg-white p-0.5 text-gray-500 shadow-sm hover:bg-gray-100"><X size={16} /></button></div> : <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gray-100 text-gray-400"><User size={48} /></div>}<label htmlFor="photo-upload" className="cursor-pointer rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"><UploadCloud className="mr-2 inline-block" size={16}/><span>{photoPreview ? 'Trocar foto' : 'Enviar foto'}</span><input id="photo-upload" name="fotoCandidato" type="file" className="sr-only" accept="image/*" onChange={handlePhotoChange} /></label></div></div><div className="sm:col-span-full"><FormField id="nomeCandidato" label="Nome Completo" required><input type="text" name="nomeCandidato" id="nomeCandidato" value={formData.nomeCandidato} onChange={handleChange} required className={inputClasses}/></FormField></div><div className="sm:col-span-3"><FormField id="emailCandidato" label="Email" required><input id="emailCandidato" name="emailCandidato" type="email" value={formData.emailCandidato} onChange={handleChange} required className={inputClasses}/></FormField></div><div className="sm:col-span-3"><FormField id="datanascimentoCandidato" label="Data de Nascimento" required><input type="date" name="datanascimentoCandidato" id="datanascimentoCandidato" value={formData.datanascimentoCandidato} onChange={handleChange} required className={inputClasses}/></FormField></div>
@@ -229,7 +262,39 @@ export default function FormCandidatoPublico({ vagaId }: { vagaId: number }) {
             className={inputClasses}
           />
         </FormField></div>
-        <div className="sm:col-span-3"><FormField id="sexoCandidato" label="Sexo" required><select name="sexoCandidato" id="sexoCandidato" value={formData.sexoCandidato} onChange={handleChange} required className={inputClasses}><option value="">Selecione</option><option value="Masculino">Masculino</option><option value="Feminino">Feminino</option><option value="Outro">Outro</option></select></FormField></div>{formData.sexoCandidato === 'Outro' && <div className="sm:col-span-3"><FormField id="outrosexoCandidato" label="Especifique" required><input type="text" name="outrosexoCandidato" id="outrosexoCandidato" value={formData.outrosexoCandidato} onChange={handleChange} required className={inputClasses}/></FormField></div>}<div className="sm:col-span-3"><FormField id="estadocivilCandidato" label="Estado Civil" required><select name="estadocivilCandidato" id="estadocivilCandidato" value={formData.estadocivilCandidato} onChange={handleChange} required className={inputClasses}><option value="">Selecione</option><option value="Solteiro(a)">Solteiro(a)</option><option value="Casado(a)">Casado(a)</option><option value="Divorciado(a)">Divorciado(a)</option><option value="Viúvo(a)">Viúvo(a)</option><option value="União Estável">União Estável</option></select></FormField></div></div></section>)}
+        <div className="sm:col-span-3"><FormField id="sexoCandidato" label="Sexo" required><select name="sexoCandidato" id="sexoCandidato" value={formData.sexoCandidato} onChange={handleChange} required className={inputClasses}><option value="">Selecione</option><option value="Masculino">Masculino</option><option value="Feminino">Feminino</option><option value="Outro">Outro</option></select></FormField></div>{formData.sexoCandidato === 'Outro' && <div className="sm:col-span-3"><FormField id="outrosexoCandidato" label="Especifique" required><input type="text" name="outrosexoCandidato" id="outrosexoCandidato" value={formData.outrosexoCandidato} onChange={handleChange} required className={inputClasses}/></FormField></div>}<div className="sm:col-span-3"><FormField id="estadocivilCandidato" label="Estado Civil" required><select name="estadocivilCandidato" id="estadocivilCandidato" value={formData.estadocivilCandidato} onChange={handleChange} required className={inputClasses}><option value="">Selecione</option><option value="Solteiro(a)">Solteiro(a)</option><option value="Casado(a)">Casado(a)</option><option value="Divorciado(a)">Divorciado(a)</option><option value="Viúvo(a)">Viúvo(a)</option><option value="União Estável">União Estável</option></select></FormField></div>                <div className="sm:col-span-3">
+                    <FormField id="parentescoCandidato" label="Possui parente na empresa?">
+                        <select 
+                            name="parentescoCandidato" 
+                            id="parentescoCandidato" 
+                            value={formData.parentescoCandidato} 
+                            onChange={handleChange} 
+                            className={inputClasses}
+                        >
+                            <option value="Não">Não</option>
+                            <option value="Sim">Sim</option>
+                        </select>
+                    </FormField>
+                </div>
+
+                {formData.parentescoCandidato === 'Sim' && (
+                    <div className="sm:col-span-full">
+                        <FormField id="graudeparentescoenomeCandidato" label="Qual o nome e o grau de parentesco?" required>
+                            <input 
+                                type="text" 
+                                name="graudeparentescoenomeCandidato" 
+                                id="graudeparentescoenomeCandidato" 
+                                value={formData.graudeparentescoenomeCandidato} 
+                                onChange={handleChange} 
+                                required 
+                                className={inputClasses}
+                                placeholder="Ex: João da Silva (Primo)"
+                            />
+                        </FormField>
+                    </div>
+                )}</div></section>)}
+        
+
         {activeTab === 'documentos' && (<section><h2 className="text-xl font-semibold text-gray-700 border-b pb-4 mb-6">Documentos e Redes Sociais</h2><div className="grid grid-cols-1 gap-x-6 gap-y-8 md:grid-cols-6">
         <div className="sm:col-span-3"><FormField id="cpfCandidato" label="CPF" required>
           <IMaskInput

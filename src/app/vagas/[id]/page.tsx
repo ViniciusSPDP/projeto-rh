@@ -1,13 +1,15 @@
+// src/app/vagas/[id]/page.tsx
+
 import prisma from '@/lib/prisma'
-import { notFound, redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import EtapaSelect from '@/app/components/EtapaSelect'
-import BotaoFecharVaga from '@/app/components/BotaoFecharVaga'
-import { Briefcase, FileText, UserPlus, Users, ArrowLeft, ClipboardList, Share2, Copy } from 'lucide-react'
+import { Briefcase, FileText, UserPlus, Users, ArrowLeft, ClipboardList, Share2, Tag, ShieldAlert } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import EtapaSelect from '@/app/components/EtapaSelect'
+import { BotaoFecharVaga } from '@/app/components/BotaoFecharVaga'
 
-// Função para buscar os dados da vaga. Centraliza a lógica de acesso ao banco.
+
 async function getVaga(id: number) {
   const vaga = await prisma.vaga.findUnique({
     where: { idVaga: id },
@@ -21,15 +23,13 @@ async function getVaga(id: number) {
   return vaga
 }
 
-// Componente para o "crachá" de status da vaga
 function StatusBadge({ status }: { status: string }) {
   const baseClasses = "px-3 py-1 text-xs font-medium rounded-full inline-block"
   if (status === 'Aberta') {
-    return <span className={`${baseClasses} bg-green-100 text-green-800`}>Aberta</span>
+    return <span className={`${baseClasses} bg-green-100 text-green-800`}>{status}</span>
   }
   return <span className={`${baseClasses} bg-red-100 text-red-800`}>{status}</span>
 }
-
 
 export default async function DetalheVagaPage({ params }: { params: { id: string } }) {
   const id = Number(params.id)
@@ -43,12 +43,11 @@ export default async function DetalheVagaPage({ params }: { params: { id: string
     return notFound()
   }
   
-  // URL pública para compartilhamento
   const publicUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/vagas/${vaga.idVaga}/formulario`
+  const isVagaAberta = vaga.status === 'Aberta';
 
   return (
-    <div className="max-w-7xl mx-auto">
-      {/* Cabeçalho da Página */}
+    <div className="max-w-7xl mx-auto py-10 px-4">
       <header className="bg-white shadow-sm rounded-lg p-6 mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start gap-4">
           <div>
@@ -71,7 +70,11 @@ export default async function DetalheVagaPage({ params }: { params: { id: string
             </div>
           </div>
           <div className="flex items-center gap-3 mt-4 md:mt-0 self-start md:self-end">
-             <Link
+            
+            {/* --- AQUI ESTÁ A CORREÇÃO --- */}
+            {isVagaAberta ? (
+              // Se a vaga está aberta, renderiza o Link funcional
+              <Link
                 href={publicUrl}
                 target="_blank"
                 className="inline-flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-200 transition"
@@ -79,7 +82,18 @@ export default async function DetalheVagaPage({ params }: { params: { id: string
                 <Share2 size={16} />
                 <span>Ver Página Pública</span>
               </Link>
-            {vaga.status === 'Aberta' && <BotaoFecharVaga vagaId={vaga.idVaga} />}
+            ) : (
+              // Se a vaga está encerrada, renderiza um span desabilitado
+              <span
+                className="inline-flex items-center gap-2 bg-gray-50 text-gray-400 px-4 py-2 rounded-lg cursor-not-allowed opacity-70"
+                aria-disabled="true"
+              >
+                <Share2 size={16} />
+                <span>Página Pública</span>
+              </span>
+            )}
+            
+            {isVagaAberta && <BotaoFecharVaga vagaId={vaga.idVaga} />}
           </div>
         </div>
         {vaga.descricao && 
@@ -90,7 +104,6 @@ export default async function DetalheVagaPage({ params }: { params: { id: string
         }
       </header>
       
-      {/* Seção de Candidatos */}
       <div className="bg-white shadow-sm rounded-lg p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <div className="flex items-center gap-3">
@@ -102,14 +115,29 @@ export default async function DetalheVagaPage({ params }: { params: { id: string
               <p className="text-sm text-gray-500">{vaga.candidatos.length} candidato(s) no total</p>
             </div>
           </div>
-          <Link
-            href={`/vagas/${id}/selecionar`}
-            className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition"
-          >
-            <UserPlus size={18} />
-            Adicionar Candidato
-          </Link>
+          {isVagaAberta && (
+            <Link
+              href={`/vagas/${id}/selecionar`}
+              className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition"
+            >
+              <UserPlus size={18} />
+              Adicionar Candidato
+            </Link>
+          )}
         </div>
+
+        {!isVagaAberta && (
+            <div className="mb-6 rounded-md bg-yellow-50 p-4 border border-yellow-200">
+                <div className="flex">
+                    <div className="flex-shrink-0">
+                        <ShieldAlert className="h-5 w-5 text-yellow-500" />
+                    </div>
+                    <div className="ml-3">
+                        <p className="text-sm font-medium text-yellow-800">Esta vaga está encerrada. Não é mais possível adicionar ou alterar etapas de candidatos.</p>
+                    </div>
+                </div>
+            </div>
+        )}
 
         {vaga.candidatos.length === 0 ? (
           <div className="text-center py-16 border-2 border-dashed rounded-lg">
@@ -121,19 +149,19 @@ export default async function DetalheVagaPage({ params }: { params: { id: string
           <div className="flow-root">
             <ul className="-my-5 divide-y divide-gray-200">
               {vaga.candidatos.map((vc) => (
-                <li key={vc.id} className="py-5">
+                vc.candidato && <li key={vc.id} className="py-5">
                   <div className="flex items-center space-x-4">
                     <div className="flex-shrink-0">
                       <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-bold">
-                        {vc.candidato?.nomeCandidato?.charAt(0).toUpperCase()}
+                        {vc.candidato.nomeCandidato?.charAt(0).toUpperCase()}
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-md font-semibold text-indigo-700 truncate">
-                        {vc.candidato?.nomeCandidato || '—'}
+                        {vc.candidato.nomeCandidato}
                       </p>
                       <p className="text-sm text-gray-500 truncate">
-                        {vc.candidato?.emailCandidato || 'Sem email'}
+                        {vc.candidato.emailCandidato}
                       </p>
                     </div>
                     <div className="flex-shrink-0 w-48">
@@ -141,6 +169,7 @@ export default async function DetalheVagaPage({ params }: { params: { id: string
                         vagaId={vaga.idVaga}
                         vagaCandidatoId={vc.id}
                         etapaAtual={vc.etapa}
+                        disabled={!isVagaAberta}
                       />
                     </div>
                     <div className="flex-shrink-0">

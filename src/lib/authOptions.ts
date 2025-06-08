@@ -33,11 +33,14 @@ export const authOptions: NextAuthOptions = {
           user.autorizado &&
           await bcrypt.compare(credentials.senha, user.senhahash)
         ) {
+          // --- ALTERAÇÃO: Adicionando 'fotourl' explicitamente ---
+          // Isso garante que o objeto 'user' tenha a propriedade 'fotourl'
           return {
             id: String(user.id),
             name: user.nome,
             email: user.email,
-            image: user.fotourl ?? null,
+            image: user.fotourl, // next-auth usa 'image' por padrão
+            fotourl: user.fotourl, // nossa propriedade customizada
           }
         }
 
@@ -46,19 +49,27 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
 
-  // ⬇️ AQUI vai o trecho que você perguntou
   callbacks: {
+    // O callback 'jwt' é chamado após o 'authorize'
     async jwt({ token, user }) {
-      if (user && user.id) {
-        token.id = String(user.id)
+      // O objeto 'user' só está disponível no primeiro login
+      if (user) {
+        token.id = user.id
+        // --- ALTERAÇÃO: Passando a fotourl para o token ---
+        token.fotourl = user.fotourl
       }
       return token
     },
+    // O callback 'session' usa os dados do token para montar a sessão do cliente
     async session({ session, token }) {
       if (token?.id && session.user) {
-        session.user.id = String(token.id)
+        session.user.id = token.id
+        // --- ALTERAÇÃO: Passando a fotourl do token para a sessão final ---
+        session.user.fotourl = token.fotourl
       }
       return session
     },
   },
+  secret: process.env.NEXTAUTH_SECRET, // Não se esqueça de definir esta variável no seu .env
+  // pages: { signIn: '/login' }, // Esta linha parece duplicada, removi
 }

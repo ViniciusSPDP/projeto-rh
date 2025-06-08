@@ -1,37 +1,40 @@
-// /src/app/api/vagas/[id]/fechar/route.ts
+// src/app/api/vagas/[id]/fechar/route.ts
+
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 
+// Usamos o método PATCH para atualizações parciais
 export async function PATCH(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   const vagaId = Number(params.id)
 
-  // Pega todos os vínculos dessa vaga
-  const vinculados = await prisma.vagaCandidato.findMany({
-    where: { vagaId },
-    include: { candidato: true },
-  })
+  if (isNaN(vagaId)) {
+    return NextResponse.json({ error: 'ID da vaga inválido' }, { status: 400 })
+  }
 
-  // Atualiza situaçãoCandidato de acordo com etapa
-  const atualizacoes = vinculados.map((vc) =>
-    prisma.candidatos.update({
-      where: { idCandidato: vc.candidatoId },
-      data: {
-        situacaoCandidato: vc.etapa === 'Contratado' ? 'Contratado' : 'Reprovado',
-      },
+  try {
+    const vaga = await prisma.vaga.findUnique({
+      where: { idVaga: vagaId },
     })
-  )
 
-  // Executa atualizações + fecha a vaga
-  await prisma.$transaction([
-    ...atualizacoes,
-    prisma.vaga.update({
+    if (!vaga) {
+      return NextResponse.json({ error: 'Vaga não encontrada' }, { status: 404 })
+    }
+
+    // Atualiza o status da vaga para "Encerrada"
+    const vagaAtualizada = await prisma.vaga.update({
       where: { idVaga: vagaId },
       data: { status: 'Encerrada' },
-    }),
-  ])
+    })
 
-  return NextResponse.json({ status: 'ok' })
+    return NextResponse.json(vagaAtualizada)
+  } catch (error) {
+    console.error('Erro ao encerrar vaga:', error)
+    return NextResponse.json(
+      { error: 'Erro interno do servidor' },
+      { status: 500 }
+    )
+  }
 }

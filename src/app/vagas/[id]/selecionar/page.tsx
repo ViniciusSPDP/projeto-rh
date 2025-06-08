@@ -11,42 +11,39 @@ import {
   ChevronRight,
   ArrowLeft,
   Check,
+  Filter, // Ícone para a seção de filtros
 } from 'lucide-react'
 import Link from 'next/link'
 
-// Define a tipagem para o objeto de candidato para maior segurança de tipo.
+// Tipagem atualizada para corresponder ao seu modelo
 type Candidato = {
   idCandidato: number
   nomeCandidato: string
-  email: string
+  emailCandidato: string 
 }
 
-// --- Componentes Modulares para uma UI mais limpa ---
+// --- Componentes Modulares ---
 
-// Componente para a Barra de Busca
 function SearchBar({ initialSearch, onSearch }: { initialSearch: string; onSearch: (query: string) => void }) {
   const [query, setQuery] = useState(initialSearch)
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSearch(query)
   }
-
   return (
-    <form onSubmit={handleSubmit} className="relative w-full md:max-w-md">
+    <form onSubmit={handleSubmit} className="relative w-full md:max-w-xs">
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
       <input
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Buscar por nome, email ou CPF..."
+        placeholder="Buscar por nome, email..."
         className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-11 pr-4 text-gray-800 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
       />
     </form>
   )
 }
 
-// Componente para o Card de Candidato na lista
 function CandidatoCard({ candidato, isSelected, onToggle }: { candidato: Candidato; isSelected: boolean; onToggle: (id: number) => void; }) {
   return (
     <li
@@ -69,14 +66,47 @@ function CandidatoCard({ candidato, isSelected, onToggle }: { candidato: Candida
         <p className={`truncate text-md font-semibold ${isSelected ? 'text-indigo-800' : 'text-gray-800'}`}>
           {candidato.nomeCandidato}
         </p>
-        <p className={`truncate text-sm ${isSelected ? 'text-indigo-600' : 'text-gray-500'}`}>{candidato.email}</p>
+        <p className={`truncate text-sm ${isSelected ? 'text-indigo-600' : 'text-gray-500'}`}>{candidato.emailCandidato}</p>
       </div>
     </li>
   )
 }
 
-// --- Componente Principal da Página ---
+// --- Componente para os Filtros ---
+const VAGA_INTERESSE_OPTIONS = [
+    { value: "Administrativo", label: "Administrativo" }, { value: "Reposição", label: "Reposição" },
+    { value: "Expedição", label: "Expedição" }, { value: "Recebimento", label: "Recebimento" },
+    { value: "Entrega", label: "Entrega" }, { value: "Financeiro", label: "Financeiro" },
+    { value: "Compras", label: "Compras" }, { value: "Fiscal", label: "Fiscal" },
+    { value: "Vendas", label: "Vendas" }, { value: "Marketing", label: "Marketing" },
+    { value: "Conferência", label: "Conferência" }, { value: "RH", label: "RH" },
+    { value: "TI", label: "TI" },
+];
 
+const SITUACAO_CANDIDATO_OPTIONS = [
+    { value: "Reprovado", label: "Reprovado" }, { value: "Em processo", label: "Em processo" },
+    { value: "Contratado", label: "Contratado" }, { value: "Em análise", label: "Em análise" },
+];
+
+function FilterDropdown({ label, value, options, onChange }: { label: string; value: string; options: {value: string; label: string}[]; onChange: (value: string) => void }) {
+    return (
+        <div>
+            <label className="block text-sm font-medium text-gray-700">{label}</label>
+            <select
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                className="mt-1 block w-full rounded-lg border-gray-300 bg-white py-2 pl-3 pr-10 text-base shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+            >
+                <option value="">Todos</option>
+                {options.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+            </select>
+        </div>
+    );
+}
+
+// --- Componente Principal da Página ---
 export default function SelecionarCandidatosPage({ params }: { params: { id: string } }) {
   const vagaId = Number(params.id)
   const router = useRouter()
@@ -87,60 +117,67 @@ export default function SelecionarCandidatosPage({ params }: { params: { id: str
   const [isFetching, setIsFetching] = useState(true)
   const [isSubmitting, startTransition] = useTransition()
 
+  // Lendo todos os parâmetros da URL, incluindo os novos filtros
   const page = Number(searchParams.get('page') || '1')
   const search = searchParams.get('search') || ''
+  const vagaInteresse = searchParams.get('vaga_interesse') || ''
+  const situacao = searchParams.get('situacao') || ''
 
-  // Efeito para buscar os candidatos disponíveis na API
+  // O useEffect agora depende também dos filtros para re-buscar os dados
   useEffect(() => {
     const fetchCandidatos = async () => {
       setIsFetching(true)
+      const urlParams = new URLSearchParams({
+        vagaId: String(vagaId),
+        page: String(page),
+        search: search,
+        vaga_interesse: vagaInteresse,
+        situacao: situacao,
+      })
       try {
-        const res = await fetch(`/api/candidatos-disponiveis?vagaId=${vagaId}&page=${page}&search=${search}`)
+        const res = await fetch(`/api/candidatos-disponiveis?${urlParams.toString()}`)
         const data = await res.json()
         setCandidatos(data)
       } catch (error) {
         console.error("Falha ao buscar candidatos:", error)
-        // Opcional: Adicionar estado de erro para mostrar na UI
       } finally {
         setIsFetching(false)
       }
     }
     fetchCandidatos()
-  }, [vagaId, page, search])
+  }, [vagaId, page, search, vagaInteresse, situacao]) // Dependências atualizadas
   
-  // Funções para manipular a navegação e a busca
   const handleNavigation = (newParams: URLSearchParams) => {
     router.push(`/vagas/${vagaId}/selecionar?${newParams.toString()}`)
   }
+  
+  // Função genérica para lidar com a mudança de qualquer filtro
+  const handleFilterChange = (filterName: string, value: string) => {
+    const newParams = new URLSearchParams(searchParams.toString());
+    if (value) {
+      newParams.set(filterName, value);
+    } else {
+      newParams.delete(filterName);
+    }
+    newParams.set('page', '1'); // Sempre reseta para a primeira página ao aplicar um filtro
+    handleNavigation(newParams);
+  }
 
   const handleSearch = (query: string) => {
-    const newParams = new URLSearchParams(searchParams.toString())
-    if (query) {
-      newParams.set('search', query)
-    } else {
-      newParams.delete('search')
-    }
-    newParams.set('page', '1')
-    handleNavigation(newParams)
+    handleFilterChange('search', query);
   }
 
   const goToPage = (newPage: number) => {
-    const newParams = new URLSearchParams(searchParams.toString())
-    // AQUI ESTÁ A CORREÇÃO:
-    // A linha abaixo estava 'params.set(...)' e deveria ser 'newParams.set(...)'
-    newParams.set('page', String(newPage))
-    // E aqui passamos a variável correta 'newParams'
-    handleNavigation(newParams)
+    if (newPage < 1) return;
+    handleFilterChange('page', String(newPage));
   }
 
-  // Função para (de)selecionar um candidato
   const toggleSelecionado = (id: number) => {
     setSelecionados((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     )
   }
 
-  // Função para vincular os candidatos selecionados à vaga
   const vincularCandidatos = async () => {
     startTransition(async () => {
       await fetch(`/api/vagas/${vagaId}/vincular`, {
@@ -149,12 +186,12 @@ export default function SelecionarCandidatosPage({ params }: { params: { id: str
         body: JSON.stringify({ candidatos: selecionados }),
       })
       router.push(`/vagas/${vagaId}`)
-      router.refresh() // Força a atualização dos dados na página de destino
+      router.refresh()
     })
   }
 
   return (
-    <div className="mx-auto max-w-4xl py-10 px-4">
+    <div className="mx-auto max-w-7xl py-10 px-4">
       <header className="mb-8">
         <Link href={`/vagas/${vagaId}`} className="mb-4 flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800">
           <ArrowLeft size={16} />
@@ -165,9 +202,34 @@ export default function SelecionarCandidatosPage({ params }: { params: { id: str
             <h1 className="text-3xl font-bold text-gray-800">Adicionar Candidatos</h1>
             <p className="mt-1 text-gray-500">Selecione os candidatos que deseja vincular a esta vaga.</p>
           </div>
-          <SearchBar initialSearch={search} onSearch={handleSearch} />
         </div>
       </header>
+      
+      {/* Barra de Busca e Filtros */}
+      <div className="mb-6 grid grid-cols-1 items-end gap-4 rounded-lg border bg-gray-50 p-4 md:grid-cols-3">
+        <div className="md:col-span-1 text-gray-700">
+          <FilterDropdown
+            label="Vaga de Interesse"
+            options={VAGA_INTERESSE_OPTIONS}
+            value={vagaInteresse}
+            onChange={(value) => handleFilterChange('vaga_interesse', value)}
+          />
+        </div>
+        <div className="md:col-span-1 text-gray-700">
+          <FilterDropdown
+            label="Situação do Candidato"
+            options={SITUACAO_CANDIDATO_OPTIONS}
+            value={situacao}
+            onChange={(value) => handleFilterChange('situacao', value)}
+          />
+        </div>
+        <div className="md:col-span-1">
+            <label className="block text-sm font-medium text-gray-700">Buscar por</label>
+            <div className='mt-1'>
+                 <SearchBar initialSearch={search} onSearch={handleSearch} />
+            </div>
+        </div>
+      </div>
       
       <div className="min-h-[400px] rounded-lg bg-white p-6 shadow-sm">
         {isFetching ? (
@@ -177,9 +239,9 @@ export default function SelecionarCandidatosPage({ params }: { params: { id: str
         ) : candidatos.length === 0 ? (
           <div className="flex h-full min-h-[300px] flex-col items-center justify-center text-center">
             <Users size={48} className="text-gray-400" />
-            <h3 className="mt-4 text-lg font-medium text-gray-900">Nenhum candidato disponível</h3>
+            <h3 className="mt-4 text-lg font-medium text-gray-900">Nenhum candidato encontrado</h3>
             <p className="mt-1 text-sm text-gray-500">
-              {search ? 'Tente uma busca diferente ou verifique a grafia.' : 'Todos os candidatos já estão nesta vaga ou não há candidatos cadastrados.'}
+              {search || vagaInteresse || situacao ? 'Nenhum candidato corresponde aos filtros aplicados.' : 'Todos os candidatos já estão nesta vaga.'}
             </p>
           </div>
         ) : (
@@ -197,7 +259,6 @@ export default function SelecionarCandidatosPage({ params }: { params: { id: str
       </div>
 
       <footer className="mt-8 flex flex-col items-center justify-between gap-4 sm:flex-row">
-        {/* Paginação */}
         <div className="flex items-center gap-2">
            <button
             type="button"
@@ -220,21 +281,14 @@ export default function SelecionarCandidatosPage({ params }: { params: { id: str
           </button>
         </div>
 
-        {/* Botão de Ação Principal */}
         <button
           type="button"
           onClick={vincularCandidatos}
           disabled={isSubmitting || selecionados.length === 0}
           className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:pointer-events-none disabled:opacity-50 sm:w-auto"
         >
-          {isSubmitting ? (
-            <LoaderCircle className="h-5 w-5 animate-spin" />
-          ) : (
-            <UserPlus size={20} />
-          )}
-          <span>
-            Vincular {selecionados.length > 0 ? `${selecionados.length} candidato(s)` : ''}
-          </span>
+          {isSubmitting ? (<LoaderCircle className="h-5 w-5 animate-spin" />) : (<UserPlus size={20} />)}
+          <span>Vincular {selecionados.length > 0 ? `${selecionados.length} candidato(s)` : ''}</span>
         </button>
       </footer>
     </div>
