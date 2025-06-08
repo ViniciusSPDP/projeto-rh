@@ -2,1176 +2,291 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Save, User, Mail, Phone, Calendar, MapPin, Briefcase, CheckCircle, Circle, AlertCircle } from 'lucide-react'
+import {
+  Loader2, User, MapPin, Briefcase, CheckCircle, GraduationCap, UploadCloud, X, Contact, ArrowLeft, ArrowRight, FileText, PlusCircle
+} from 'lucide-react'
+import { IMaskInput } from 'react-imask'
+// Importe a função 'toast' da biblioteca
+import toast from 'react-hot-toast'
 
-export default function FormCandidatoPublico({ vagaId }: { vagaId: number }) {
-    const router = useRouter()
-    const [loading, setLoading] = useState(false)
-    const [activeTab, setActiveTab] = useState('pessoal')
-    const [formData, setFormData] = useState({
-        // Dados pessoais
-        nomeCandidato: '',
-        cpfCandidato: '',
-        rgCandidato: '',
-        sexoCandidato: '',
-        outrosexoCandidato: '',
-        estadocivilCandidato: '',
-        datanascimentoCandidato: '',
-        emailCandidato: '',
-        telefoneCandidato: '',
-        telefone2Candidato: '',
+// --- Tipos, Constantes e Componentes Utilitários ---
+// ... (Nenhuma alteração aqui, todo o resto do código permanece igual)
+type TabId = 'pessoal' | 'documentos' | 'endereco' | 'formacao' | 'experiencia' | 'outros'
 
-        // Documentos
-        cnhCandidato: '',
-        categoriacnhCandidato: '',
-        pcdCandidato: '',
+const TABS_CONFIG = [
+  { id: 'pessoal', label: 'Dados Pessoais', icon: Contact },
+  { id: 'documentos', label: 'Documentos e Redes', icon: FileText },
+  { id: 'endereco', label: 'Endereço', icon: MapPin },
+  { id: 'formacao', label: 'Formação', icon: GraduationCap },
+  { id: 'experiencia', label: 'Experiência', icon: Briefcase },
+  { id: 'outros', label: 'Finalização', icon: CheckCircle },
+] as const
 
-        // Redes sociais
-        linkedinCandidato: '',
-        facebookCandidato: '',
-        instagramCandidato: '',
+function FormField({ id, label, required = false, children }: { id: string, label: string, required?: boolean, children: React.ReactNode }) {
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm font-medium leading-6 text-gray-900">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <div className="mt-2">
+        {children}
+      </div>
+    </div>
+  )
+}
 
-        // Endereço
-        cepCandidato: '',
-        ruaCandidato: '',
-        numeroCandidato: '',
-        bairroCandidato: '',
-        cidadeCandidato: '',
-        estadoCandidato: '',
+const inputClasses = "block w-full rounded-md border-0 px-3 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 
-        // Interesses e formação
-        vagainteresseCandidato: '',
-        escolaridadeCandidato: '',
-        cidareacandidato: '',
-
-        // Conhecimentos
-        conhecimentosCandidato: '',
-        wordCandidato: '',
-        excelCandidato: '',
-        powerpointCandidato: '',
-        conhecimentosinformaticaCandidato: [],
-
-        conhecimentoinfcandidato: '',
-
-        // Experiência 1
-        possuiexperienciaCandidato: '',
-        empresaCandidato: '',
-        local1Candidato: '',
-        atividadesdesenvolvidas1Candidato: '',
-        datainicioCandidato: '',
-        trabalha1Candidato: '',
-        datafinalCandidato: '',
-
-        // Experiência 2
-        empresa2Candidato: '',
-        local2Candidato: '',
-        atividadesdesenvolvidas2Candidato: '',
-        datainicio2Candidato: '',
-        trabalha2Candidato: '',
-        datafinal2Candidato: '',
-
-        // Experiência 3
-        empresa3Candidato: '',
-        local3Candidato: '',
-        atividadesdesenvolvidas3Candidato: '',
-        datainicio3Candidato: '',
-        trabalha3Candidato: '',
-        datafinal3Candidato: '',
-
-        // Outros
-        fotoCandidato: '',
-        parentescoCandidato: '',
-        graudeparentescoenomeCandidato: '',
-        situacaoCandidato: '',
-    })
-
-    function formatDate(dateString?: string | Date) {
-        if (!dateString) return ''
-        const date = new Date(dateString)
-        return date.toISOString().split('T')[0]
-    }
-
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target
-
-        // Se for PCD e valor for "Não", limpa o campo CID
-        if (name === 'pcdCandidato' && value === 'Não') {
-            setFormData(prev => ({
-                ...prev,
-                [name]: value,
-                cidareacandidato: ''
-            }))
-        } else {
-            setFormData(prev => ({
-                ...prev,
-                [name]: value
-            }))
-        }
-    }
-
-
-
-    async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-        e.preventDefault()
-        setLoading(true)
-
-        try {
-            const res = await fetch('/api/candidatos/publico', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...formData,
-                    situacaoCandidato: 'Em processo',
-                    conhecimentosinformaticaCandidato: formData.conhecimentosinformaticaCandidato.join(', '),
-                    vagaId, // vincula à vaga diretamente
-                }),
-            })
-
-            if (res.ok) {
-                router.push(`/obrigado`)
-            } else {
-                throw new Error('Erro ao atualizar candidato')
-            }
-        } catch (error) {
-            if (error instanceof Error) {
-                alert('Erro ao atualizar candidato: ' + error.message)
-            } else {
-                alert('Erro desconhecido ao atualizar candidato.')
-            }
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    // Verifica se o CEP é válido e busca dados de endereço
-    const buscarCep = async () => {
-        const cep = formData.cepCandidato.replace(/\D/g, '')
-
-        if (cep.length !== 8) return
-
-        setLoading(true)
-
-        try {
-            const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
-            const data = await response.json()
-
-            if (!data.erro) {
-                setFormData(prev => ({
-                    ...prev,
-                    ruaCandidato: data.logradouro,
-                    bairroCandidato: data.bairro,
-                    cidadeCandidato: data.localidade,
-                    estadoCandidato: data.uf
-                }))
-            }
-        } catch (error) {
-            console.error('Erro ao buscar CEP:', error)
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    const tabs = [
-        { id: 'pessoal', label: 'Dados Pessoais', icon: <User size={18} /> },
-        { id: 'endereco', label: 'Endereço', icon: <MapPin size={18} /> },
-        { id: 'formacao', label: 'Formação', icon: <CheckCircle size={18} /> },
-        { id: 'experiencia', label: 'Experiência', icon: <Briefcase size={18} /> },
-        { id: 'outros', label: 'Outros Dados', icon: <Circle size={18} /> },
-    ]
+function ExperienciaFields({ index, formData, handleChange }: { index: number, formData: any, handleChange: any }) {
+    const nomeEmpresa = `empresa${index === 1 ? '' : index}Candidato`
+    const nomeLocal = `local${index}Candidato`
+    const nomeAtividades = `atividadesdesenvolvidas${index}Candidato`
+    const nomeInicio = `datainicio${index === 1 ? '' : index}Candidato`
+    const nomeFim = `datafinal${index === 1 ? '' : index}Candidato`
+    const nomeTrabalha = `trabalha${index}Candidato`
 
     return (
-        <div className="bg-white rounded-lg shadow-lg p-6 max-w-6xl mx-auto">
-            <h1 className="text-3xl font-bold text-blue-800 mb-8 flex items-center">
-                <User className="mr-2" /> Editar Candidato
-            </h1>
-
-            {/* Tabs de navegação */}
-            <div className="flex overflow-x-auto mb-8 border-b border-blue-100">
-                {tabs.map(tab => (
-                    <button
-                        key={tab.id}
-                        className={`flex items-center px-4 py-3 font-medium transition-colors duration-200 whitespace-nowrap
-              ${activeTab === tab.id ?
-                                'text-blue-600 border-b-2 border-blue-600' :
-                                'text-gray-500 hover:text-blue-600'}`}
-                        onClick={() => setActiveTab(tab.id)}
-                    >
-                        <span className="mr-2">{tab.icon}</span>
-                        {tab.label}
-                    </button>
-                ))}
+        <div className="rounded-lg border border-gray-200 p-4">
+            <h3 className="mb-4 font-semibold text-gray-800">Experiência {index}</h3>
+            <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+                <div className="sm:col-span-3"><FormField id={nomeEmpresa} label="Empresa" required><input type="text" name={nomeEmpresa} id={nomeEmpresa} value={formData[nomeEmpresa]} onChange={handleChange} required className={inputClasses}/></FormField></div>
+                <div className="sm:col-span-3"><FormField id={nomeLocal} label="Local" required><input type="text" name={nomeLocal} id={nomeLocal} value={formData[nomeLocal]} onChange={handleChange} required className={inputClasses}/></FormField></div>
+                <div className="sm:col-span-3"><FormField id={nomeInicio} label="Data de Início" required><input type="date" name={nomeInicio} id={nomeInicio} value={formData[nomeInicio]} onChange={handleChange} required className={inputClasses}/></FormField></div>
+                <div className="sm:col-span-3"><FormField id={nomeFim} label="Data de Término" required={formData[nomeTrabalha] !== 'Sim'}><input type="date" name={nomeFim} id={nomeFim} value={formData[nomeFim]} disabled={formData[nomeTrabalha] === 'Sim'} onChange={handleChange} required={formData[nomeTrabalha] !== 'Sim'} className={`${inputClasses} disabled:bg-gray-100`}/></FormField></div>
+                <div className="sm:col-span-full"><label className="flex items-center gap-2 text-sm font-medium text-gray-800"><input type="checkbox" name={nomeTrabalha} checked={formData[nomeTrabalha] === 'Sim'} onChange={e => handleChange({ target: { name: nomeTrabalha, value: e.target.checked ? 'Sim' : 'Não', type: 'custom' } })} className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"/>Trabalho atualmente aqui</label></div>
+                <div className="col-span-full"><FormField id={nomeAtividades} label="Atividades Desenvolvidas" required><textarea name={nomeAtividades} id={nomeAtividades} value={formData[nomeAtividades]} onChange={handleChange} rows={3} required className={inputClasses}/></FormField></div>
             </div>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Tab Dados Pessoais */}
-                {activeTab === 'pessoal' && (
-                    <div className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="relative">
-                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                    Nome Completo <span className="text-red-500">*</span>
-                                </label>
-                                <div className="relative">
-                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
-                                        <User size={16} />
-                                    </span>
-                                    <input
-                                        type="text"
-                                        name="nomeCandidato"
-                                        value={formData.nomeCandidato}
-                                        onChange={handleChange}
-                                        required
-                                        className="w-full pl-10 pr-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                    Data de Nascimento
-                                </label>
-                                <input
-                                    type="date"
-                                    name="datanascimentoCandidato"
-                                    value={formData.datanascimentoCandidato}
-                                    onChange={handleChange}
-                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                    CPF
-                                </label>
-                                <input
-                                    type="text"
-                                    name="cpfCandidato"
-                                    value={formData.cpfCandidato}
-                                    onChange={handleChange}
-                                    placeholder="000.000.000-00"
-                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                    RG
-                                </label>
-                                <input
-                                    type="text"
-                                    name="rgCandidato"
-                                    value={formData.rgCandidato}
-                                    onChange={handleChange}
-                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                    Sexo
-                                </label>
-                                <select
-                                    name="sexoCandidato"
-                                    value={formData.sexoCandidato}
-                                    onChange={handleChange}
-                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                >
-                                    <option value="">Selecione</option>
-                                    <option value="Masculino">Masculino</option>
-                                    <option value="Feminino">Feminino</option>
-                                    <option value="Outro">Outro</option>
-                                </select>
-                            </div>
-
-                            {formData.sexoCandidato === 'Outro' && (
-                                <div>
-                                    <label className="block text-sm font-medium text-blue-700 mb-1">
-                                        Especifique
-                                    </label>
-                                    <input
-                                        type="text"
-                                        name="outrosexoCandidato"
-                                        value={formData.outrosexoCandidato}
-                                        onChange={handleChange}
-                                        className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    />
-                                </div>
-                            )}
-
-                            <div>
-                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                    Estado Civil
-                                </label>
-                                <select
-                                    name="estadocivilCandidato"
-                                    value={formData.estadocivilCandidato}
-                                    onChange={handleChange}
-                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                >
-                                    <option value="">Selecione</option>
-                                    <option value="Solteiro(a)">Solteiro(a)</option>
-                                    <option value="Casado(a)">Casado(a)</option>
-                                    <option value="Divorciado(a)">Divorciado(a)</option>
-                                    <option value="Viúvo(a)">Viúvo(a)</option>
-                                    <option value="União Estável">União Estável</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                    Pessoa com Deficiência
-                                </label>
-                                <select
-                                    name="pcdCandidato"
-                                    value={formData.pcdCandidato}
-                                    onChange={handleChange}
-                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                >
-                                    <option value="">Selecione</option>
-                                    <option value="Sim">Sim</option>
-                                    <option value="Não">Não</option>
-                                </select>
-                            </div>
-                            {formData.pcdCandidato === 'Sim' && (
-                                <div>
-                                    <label className="block text-sm font-medium text-blue-700 mb-1">
-                                        CID Candidato
-                                    </label>
-                                    <input
-                                        type="text"
-                                        name="cidareacandidato"
-                                        value={formData.cidareacandidato}
-                                        onChange={handleChange}
-                                        className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    />
-                                </div>
-                            )}
-
-                        </div>
-
-                        <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
-                            <h3 className="text-lg font-medium text-blue-800 mb-3">Contato</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="relative">
-                                    <label className="block text-sm font-medium text-blue-700 mb-1">
-                                        Email <span className="text-red-500">*</span>
-                                    </label>
-                                    <div className="relative">
-                                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
-                                            <Mail size={16} />
-                                        </span>
-                                        <input
-                                            type="email"
-                                            name="emailCandidato"
-                                            value={formData.emailCandidato}
-                                            onChange={handleChange}
-                                            required
-                                            className="w-full pl-10 pr-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="relative">
-                                    <label className="block text-sm font-medium text-blue-700 mb-1">
-                                        Telefone Principal <span className="text-red-500">*</span>
-                                    </label>
-                                    <div className="relative">
-                                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
-                                            <Phone size={16} />
-                                        </span>
-                                        <input
-                                            type="tel"
-                                            name="telefoneCandidato"
-                                            value={formData.telefoneCandidato}
-                                            onChange={handleChange}
-                                            required
-                                            placeholder="(00) 00000-0000"
-                                            className="w-full pl-10 pr-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-blue-700 mb-1">
-                                        Telefone Secundário
-                                    </label>
-                                    <input
-                                        type="tel"
-                                        name="telefone2Candidato"
-                                        value={formData.telefone2Candidato}
-                                        onChange={handleChange}
-                                        placeholder="(00) 00000-0000"
-                                        className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
-                            <h3 className="text-lg font-medium text-blue-800 mb-3">Documentos</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-blue-700 mb-1">
-                                        CNH
-                                    </label>
-                                    <select
-                                        name="cnhCandidato"
-                                        value={formData.cnhCandidato}
-                                        onChange={handleChange}
-                                        className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    >
-                                        <option value="">Selecione</option>
-                                        <option value="Sim">Sim</option>
-                                        <option value="Não">Não</option>
-                                    </select>
-                                </div>
-
-                                {formData.cnhCandidato === 'Sim' && (
-                                    <div>
-                                        <label className="block text-sm font-medium text-blue-700 mb-1">
-                                            Categoria CNH
-                                        </label>
-                                        <select
-                                            name="categoriacnhCandidato"
-                                            value={formData.categoriacnhCandidato}
-                                            onChange={handleChange}
-                                            className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        >
-                                            <option value="">Selecione</option>
-                                            <option value="A">A</option>
-                                            <option value="B">B</option>
-                                            <option value="AB">AB</option>
-                                            <option value="C">C</option>
-                                            <option value="D">D</option>
-                                            <option value="E">E</option>
-                                        </select>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
-                            <h3 className="text-lg font-medium text-blue-800 mb-3">Redes Sociais</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-blue-700 mb-1">
-                                        LinkedIn
-                                    </label>
-                                    <input
-                                        type="url"
-                                        name="linkedinCandidato"
-                                        value={formData.linkedinCandidato}
-                                        onChange={handleChange}
-                                        placeholder="https://linkedin.com/in/usuario"
-                                        className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-blue-700 mb-1">
-                                        Facebook
-                                    </label>
-                                    <input
-                                        type="url"
-                                        name="facebookCandidato"
-                                        value={formData.facebookCandidato}
-                                        onChange={handleChange}
-                                        placeholder="https://facebook.com/usuario"
-                                        className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-blue-700 mb-1">
-                                        Instagram
-                                    </label>
-                                    <input
-                                        type="url"
-                                        name="instagramCandidato"
-                                        value={formData.instagramCandidato}
-                                        onChange={handleChange}
-                                        placeholder="https://instagram.com/usuario"
-                                        className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Tab Endereço */}
-                {activeTab === 'endereco' && (
-                    <div className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                    CEP
-                                </label>
-                                <input
-                                    type="text"
-                                    name="cepCandidato"
-                                    value={formData.cepCandidato}
-                                    onChange={handleChange}
-                                    onBlur={buscarCep}
-                                    placeholder="00000-000"
-                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                />
-                            </div>
-
-                            <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                    Rua
-                                </label>
-                                <input
-                                    type="text"
-                                    name="ruaCandidato"
-                                    value={formData.ruaCandidato}
-                                    onChange={handleChange}
-                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                    Número
-                                </label>
-                                <input
-                                    type="text"
-                                    name="numeroCandidato"
-                                    value={formData.numeroCandidato}
-                                    onChange={handleChange}
-                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                    Bairro
-                                </label>
-                                <input
-                                    type="text"
-                                    name="bairroCandidato"
-                                    value={formData.bairroCandidato}
-                                    onChange={handleChange}
-                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                    Cidade
-                                </label>
-                                <input
-                                    type="text"
-                                    name="cidadeCandidato"
-                                    value={formData.cidadeCandidato}
-                                    onChange={handleChange}
-                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                    Estado
-                                </label>
-                                <input
-                                    type="text"
-                                    name="estadoCandidato"
-                                    value={formData.estadoCandidato}
-                                    onChange={handleChange}
-                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                />
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Tab Formação */}
-                {activeTab === 'formacao' && (
-                    <div className="space-y-6">
-                        <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
-                            <h3 className="text-lg font-medium text-blue-800 mb-3">Formação e Habilidades</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-blue-700 mb-1">
-                                        Escolaridade
-                                    </label>
-                                    <select
-                                        name="escolaridadeCandidato"
-                                        value={formData.escolaridadeCandidato}
-                                        onChange={handleChange}
-                                        className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    >
-                                        <option value="">Selecione</option>
-                                        <option value="Ensino Fundamental">Ensino Fundamental</option>
-                                        <option value="Ensino Médio">Ensino Médio</option>
-                                        <option value="Ensino Técnico">Ensino Técnico</option>
-                                        <option value="Ensino Superior">Ensino Superior</option>
-                                        <option value="Pós-Graduação">Pós-Graduação</option>
-                                        <option value="Mestrado">Mestrado</option>
-                                        <option value="Doutorado">Doutorado</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-blue-700 mb-1">
-                                        Vaga de Interesse
-                                    </label>
-                                    <select
-                                        name="vagainteresseCandidato"
-                                        value={formData.vagainteresseCandidato}
-                                        onChange={handleChange}
-                                        className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    >
-                                        <option value="">Selecione uma opção</option>
-                                        <option value="Administrativo">Administrativo</option>
-                                        <option value="Reposição">Reposição</option>
-                                        <option value="Expedição">Expedição</option>
-                                        <option value="Recebimento">Recebimento</option>
-                                        <option value="Entrega">Entrega</option>
-                                        <option value="Financeiro">Financeiro</option>
-                                        <option value="Compras">Compras</option>
-                                        <option value="Fiscal">Fiscal</option>
-                                        <option value="Vendas">Vendas</option>
-                                        <option value="Marketing">Marketing</option>
-                                        <option value="Conferência">Conferência</option>
-                                        <option value="RH">RH</option>
-                                        <option value="TI">TI</option>
-                                    </select>
-                                </div>
-
-
-                                <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-blue-700 mb-1">
-                                        Diferencial
-                                    </label>
-                                    <textarea
-                                        name="conhecimentosCandidato"
-                                        value={formData.conhecimentosCandidato}
-                                        onChange={handleChange}
-                                        rows={3}
-                                        className="w-full px-3 py-2 border text-gray-600 border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
-                            <h3 className="text-lg font-medium text-blue-800 mb-3">Conhecimentos</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-blue-700 mb-1">
-                                        Microsoft Word
-                                    </label>
-                                    <select
-                                        name="wordCandidato"
-                                        value={formData.wordCandidato}
-                                        onChange={handleChange}
-                                        className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    >
-                                        <option value="">Selecione</option>
-                                        <option value="Básico">Básico</option>
-                                        <option value="Intermediário">Intermediário</option>
-                                        <option value="Avançado">Avançado</option>
-                                        <option value="Nenhum">Nenhum</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-blue-700 mb-1">
-                                        Microsoft Excel
-                                    </label>
-                                    <select
-                                        name="excelCandidato"
-                                        value={formData.excelCandidato}
-                                        onChange={handleChange}
-                                        className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    >
-                                        <option value="">Selecione</option>
-                                        <option value="Básico">Básico</option>
-                                        <option value="Intermediário">Intermediário</option>
-                                        <option value="Avançado">Avançado</option>
-                                        <option value="Nenhum">Nenhum</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-blue-700 mb-1">
-                                        Microsoft PowerPoint
-                                    </label>
-                                    <select
-                                        name="powerpointCandidato"
-                                        value={formData.powerpointCandidato}
-                                        onChange={handleChange}
-                                        className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    >
-                                        <option value="">Selecione</option>
-                                        <option value="Básico">Básico</option>
-                                        <option value="Intermediário">Intermediário</option>
-                                        <option value="Avançado">Avançado</option>
-                                        <option value="Nenhum">Nenhum</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-blue-700 mb-1">
-                                        Outros Conhecimentos de Informática
-                                    </label>
-                                    <div className="space-y-2">
-                                        {[
-                                            'AutoCAD',
-                                            'Corel Draw',
-                                            'Photoshop',
-                                            'Programação',
-                                            'YouTube e edição de vídeos',
-                                            'Outros',
-                                        ].map((opcao) => (
-                                            <label key={opcao} className="flex items-center gap-2 text-sm text-blue-900">
-                                                <input
-                                                    type="checkbox"
-                                                    name="conhecimentosinformaticaCandidato"
-                                                    value={opcao}
-                                                    checked={formData.conhecimentosinformaticaCandidato?.includes(opcao)}
-
-                                                    onChange={(e) => {
-                                                        const { value, checked } = e.target
-                                                        const atual: string[] = formData.conhecimentosinformaticaCandidato || []
-
-                                                        const atualizado = checked
-                                                            ? [...atual, value]
-                                                            : atual.filter((v: string) => v !== value)
-
-                                                        setFormData({
-                                                            ...formData,
-                                                            conhecimentosinformaticaCandidato: atualizado,
-                                                            ...(value === 'Outros' && !checked ? { conhecimentoinfcandidato: '' } : {}), // 👈 limpa o campo se "Outros" for desmarcado
-                                                        })
-                                                    }}
-                                                />
-                                                {opcao}
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
-
-
-
-                            </div>
-                            {/* Condicional: mostrar textarea se "Outros" estiver marcado */}
-                            {formData.conhecimentosinformaticaCandidato?.includes('Outros') && (
-                                <div className="mt-4">
-                                    <label className="block text-sm font-medium text-blue-700 mb-1">
-                                        Especifique os outros conhecimentos
-                                    </label>
-                                    <textarea
-                                        name="conhecimentoinfcandidato"
-                                        value={formData.conhecimentoinfcandidato}
-                                        onChange={handleChange}
-                                        rows={3}
-                                        className="w-full px-3 py-2 border text-gray-600 border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    />
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {/* Tab Experiência */}
-
-                {activeTab === 'experiencia' && (
-                    <div className="space-y-6">
-                        <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
-                            <h3 className="text-lg font-medium text-blue-800 mb-3">Experiência Profissional</h3>
-
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                    Possui experiência profissional?
-                                </label>
-                                <select
-                                    name="possuiexperienciaCandidato"
-                                    value={formData.possuiexperienciaCandidato}
-                                    onChange={handleChange}
-                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                >
-                                    <option value="">Selecione</option>
-                                    <option value="Sim">Sim</option>
-                                    <option value="Não">Não</option>
-                                </select>
-                            </div>
-
-                            {formData.possuiexperienciaCandidato === 'Sim' && (
-                                <>
-                                    {/* Experiência 1 */}
-                                    <div className="mb-6 p-4 bg-white rounded-md border border-blue-100">
-                                        <h4 className="text-md font-medium text-blue-800 mb-3">Experiência 1</h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                                    Empresa
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    name="empresaCandidato"
-                                                    value={formData.empresaCandidato}
-                                                    onChange={handleChange}
-                                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                                    Local
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    name="local1Candidato"
-                                                    value={formData.local1Candidato}
-                                                    onChange={handleChange}
-                                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                                    Data de Início
-                                                </label>
-                                                <input
-                                                    type="date"
-                                                    name="datainicioCandidato"
-                                                    value={formData.datainicioCandidato}
-                                                    onChange={handleChange}
-                                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                                    Data de Término
-                                                </label>
-                                                <input
-                                                    type="date"
-                                                    name="datafinalCandidato"
-                                                    value={formData.datafinalCandidato}
-                                                    onChange={handleChange}
-                                                    disabled={formData.trabalha1Candidato === 'Sim'}
-                                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                                    Trabalha atualmente aqui?
-                                                </label>
-                                                <select
-                                                    name="trabalha1Candidato"
-                                                    value={formData.trabalha1Candidato}
-                                                    onChange={handleChange}
-                                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                >
-                                                    <option value="">Selecione</option>
-                                                    <option value="Sim">Sim</option>
-                                                    <option value="Não">Não</option>
-                                                </select>
-                                            </div>
-
-                                            <div className="md:col-span-2">
-                                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                                    Atividades Desenvolvidas
-                                                </label>
-                                                <textarea
-                                                    name="atividadesdesenvolvidas1Candidato"
-                                                    value={formData.atividadesdesenvolvidas1Candidato}
-                                                    onChange={handleChange}
-                                                    rows={3}
-                                                    className="text-gray-500 w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Experiência 2 */}
-                                    <div className="mb-6 p-4 bg-white rounded-md border border-blue-100">
-                                        <h4 className="text-md font-medium text-blue-800 mb-3">Experiência 2</h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                                    Empresa
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    name="empresa2Candidato"
-                                                    value={formData.empresa2Candidato}
-                                                    onChange={handleChange}
-                                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                                    Local
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    name="local2Candidato"
-                                                    value={formData.local2Candidato}
-                                                    onChange={handleChange}
-                                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                                    Data de Início
-                                                </label>
-                                                <input
-                                                    type="date"
-                                                    name="datainicio2Candidato"
-                                                    value={formData.datainicio2Candidato}
-                                                    onChange={handleChange}
-                                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                                    Data de Término
-                                                </label>
-                                                <input
-                                                    type="date"
-                                                    name="datafinal2Candidato"
-                                                    value={formData.datafinal2Candidato}
-                                                    onChange={handleChange}
-                                                    disabled={formData.trabalha2Candidato === 'Sim'}
-                                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                                    Trabalha atualmente aqui?
-                                                </label>
-                                                <select
-                                                    name="trabalha2Candidato"
-                                                    value={formData.trabalha2Candidato}
-                                                    onChange={handleChange}
-                                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                >
-                                                    <option value="">Selecione</option>
-                                                    <option value="Sim">Sim</option>
-                                                    <option value="Não">Não</option>
-                                                </select>
-                                            </div>
-
-                                            <div className="md:col-span-2">
-                                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                                    Atividades Desenvolvidas
-                                                </label>
-                                                <textarea
-                                                    name="atividadesdesenvolvidas2Candidato"
-                                                    value={formData.atividadesdesenvolvidas2Candidato}
-                                                    onChange={handleChange}
-                                                    rows={3}
-                                                    className="w-full text-gray-500 px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Experiência 3 */}
-                                    <div className="p-4 bg-white rounded-md border border-blue-100">
-                                        <h4 className="text-md font-medium text-blue-800 mb-3">Experiência 3</h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                                    Empresa
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    name="empresa3Candidato"
-                                                    value={formData.empresa3Candidato}
-                                                    onChange={handleChange}
-                                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                                    Local
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    name="local3Candidato"
-                                                    value={formData.local3Candidato}
-                                                    onChange={handleChange}
-                                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                                    Data de Início
-                                                </label>
-                                                <input
-                                                    type="date"
-                                                    name="datainicio3Candidato"
-                                                    value={formData.datainicio3Candidato}
-                                                    onChange={handleChange}
-                                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                                    Data de Término
-                                                </label>
-                                                <input
-                                                    type="date"
-                                                    name="datafinal3Candidato"
-                                                    value={formData.datafinal3Candidato}
-                                                    onChange={handleChange}
-                                                    disabled={formData.trabalha3Candidato === 'Sim'}
-                                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                                    Trabalha atualmente aqui?
-                                                </label>
-                                                <select
-                                                    name="trabalha3Candidato"
-                                                    value={formData.trabalha3Candidato}
-                                                    onChange={handleChange}
-                                                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                >
-                                                    <option value="">Selecione</option>
-                                                    <option value="Sim">Sim</option>
-                                                    <option value="Não">Não</option>
-                                                </select>
-                                            </div>
-
-                                            <div className="md:col-span-2">
-                                                <label className="block text-sm font-medium text-blue-700 mb-1">
-                                                    Atividades Desenvolvidas
-                                                </label>
-                                                <textarea
-                                                    name="atividadesdesenvolvidas3Candidato"
-                                                    value={formData.atividadesdesenvolvidas3Candidato}
-                                                    onChange={handleChange}
-                                                    rows={3}
-                                                    className="w-full text-gray-500 px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {/* Tab Outros Dados */}
-                {activeTab === 'outros' && (
-                    <div className="space-y-6">
-                        <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
-                            <h3 className="text-lg font-medium text-blue-800 mb-3">Informações Adicionais</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-blue-700 mb-1">
-                                        Foto (URL)
-                                    </label>
-                                    <input
-                                        type="url"
-                                        name="fotoCandidato"
-                                        value={formData.fotoCandidato}
-                                        onChange={handleChange}
-                                        placeholder="https://exemplo.com/foto.jpg"
-                                        className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-blue-700 mb-1">
-                                        Parentesco na Empresa
-                                    </label>
-                                    <select
-                                        name="parentescoCandidato"
-                                        value={formData.parentescoCandidato}
-                                        onChange={handleChange}
-                                        className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    >
-                                        <option value="">Selecione</option>
-                                        <option value="Sim">Sim</option>
-                                        <option value="Não">Não</option>
-                                    </select>
-                                </div>
-
-                                {formData.parentescoCandidato === 'Sim' && (
-                                    <div className="md:col-span-2">
-                                        <label className="block text-sm font-medium text-blue-700 mb-1">
-                                            Grau de Parentesco e Nome
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="graudeparentescoenomeCandidato"
-                                            value={formData.graudeparentescoenomeCandidato}
-                                            onChange={handleChange}
-                                            className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        />
-                                    </div>
-                                )}
-
-                                <div>
-                                    <label className="block text-sm font-medium text-blue-700 mb-1">
-                                        Situação do Candidato
-                                    </label>
-                                    <select
-                                        name="situacaoCandidato"
-                                        value={formData.situacaoCandidato}
-                                        onChange={handleChange}
-                                        className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    >
-                                        <option value="">Selecione</option>
-                                        <option value="Ativo">Ativo</option>
-                                        <option value="Inativo">Inativo</option>
-                                        <option value="Em Ánalise">Em Ánalise</option>
-                                        <option value="Descartado">Descartado</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Botões de ação */}
-                <div className="flex justify-end space-x-4 pt-6 border-t border-blue-100">
-                    <button
-                        type="button"
-                        onClick={() => router.push('/candidatos')}
-                        className="px-4 py-2 border border-blue-300 text-blue-700 rounded-md hover:bg-blue-50 transition-colors"
-                    >
-                        Cancelar
-                    </button>
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                    >
-                        {loading ? (
-                            <>
-                                <Loader2 className="animate-spin mr-2" size={18} />
-                                Salvando...
-                            </>
-                        ) : (
-                            <>
-                                <Save className="mr-2" size={18} />
-                                Salvar Alterações
-                            </>
-                        )}
-                    </button>
-                </div>
-            </form>
         </div>
     )
+}
+
+
+// --- Componente Principal ---
+export default function FormCandidatoPublico({ vagaId }: { vagaId: number }) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabId>('pessoal');
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [visibleExperiences, setVisibleExperiences] = useState(0);
+
+  const [formData, setFormData] = useState({
+    nomeCandidato: '', cpfCandidato: '', rgCandidato: '', sexoCandidato: '', outrosexoCandidato: '', estadocivilCandidato: '', datanascimentoCandidato: '', emailCandidato: '', telefoneCandidato: '', telefone2Candidato: '', cnhCandidato: '', categoriacnhCandidato: '', pcdCandidato: '', cidareacandidato: '', linkedinCandidato: '', facebookCandidato: '', instagramCandidato: '', cepCandidato: '', ruaCandidato: '', numeroCandidato: '', bairroCandidato: '', cidadeCandidato: '', estadoCandidato: '', vagainteresseCandidato: '', escolaridadeCandidato: '', conhecimentosCandidato: '', 
+    wordCandidato: 'Desconheço', 
+    excelCandidato: 'Desconheço', 
+    powerpointCandidato: 'Desconheço', 
+    conhecimentosinformaticaCandidato: [] as string[], conhecimentoinfcandidato: '', possuiexperienciaCandidato: '', empresaCandidato: '', local1Candidato: '', atividadesdesenvolvidas1Candidato: '', datainicioCandidato: '', trabalha1Candidato: '', datafinalCandidato: '', empresa2Candidato: '', local2Candidato: '', atividadesdesenvolvidas2Candidato: '', datainicio2Candidato: '', trabalha2Candidato: '', datafinal2Candidato: '', empresa3Candidato: '', local3Candidato: '', atividadesdesenvolvidas3Candidato: '', datainicio3Candidato: '', trabalha3Candidato: '', datafinal3Candidato: '', fotoCandidato: '', parentescoCandidato: '', graudeparentescoenomeCandidato: '',
+  });
+
+  const handleTabNavigation = (direction: 'next' | 'prev') => {
+    const currentIndex = TABS_CONFIG.findIndex(t => t.id === activeTab);
+    const newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+    if (newIndex >= 0 && newIndex < TABS_CONFIG.length) {
+      setActiveTab(TABS_CONFIG[newIndex].id);
+      window.scrollTo(0, 0);
+    }
+  };
+  
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement> | { target: { name: string, value: any, type?: string } }) => {
+    const { name, value, type } = e.target;
+    if (type === 'checkbox' && 'checked' in e.target) {
+        const { checked, value: checkboxValue } = e.target;
+        const currentValues = formData.conhecimentosinformaticaCandidato || [];
+        const newValues = checked ? [...currentValues, checkboxValue] : currentValues.filter((v) => v !== checkboxValue);
+        setFormData(prev => ({ ...prev, conhecimentosinformaticaCandidato: newValues, ...(checkboxValue === 'Outros' && !checked ? { conhecimentoinfcandidato: '' } : {}) }));
+    } else {
+        setFormData(prev => ({
+            ...prev,
+            [name]: value,
+            ...(name === 'pcdCandidato' && value === 'Não' ? { cidareacandidato: '' } : {}),
+            ...(name === 'sexoCandidato' && value !== 'Outro' ? { outrosexoCandidato: '' } : {}),
+            ...(name === 'possuiexperienciaCandidato' && value === 'Não' ? { empresaCandidato: '', local1Candidato: '', atividadesdesenvolvidas1Candidato: '', datainicioCandidato: '', trabalha1Candidato: '', datafinalCandidato: '', empresa2Candidato: '', local2Candidato: '', atividadesdesenvolvidas2Candidato: '', datainicio2Candidato: '', trabalha2Candidato: '', datafinal2Candidato: '', empresa3Candidato: '', local3Candidato: '', atividadesdesenvolvidas3Candidato: '', datainicio3Candidato: '', trabalha3Candidato: '', datafinal3Candidato: '' } : {}),
+        }));
+        if(name === 'possuiexperienciaCandidato') {
+            setVisibleExperiences(value === 'Sim' ? 1 : 0);
+        }
+    }
+  };
+  
+  const handleAddExperience = () => { if (visibleExperiences < 3) { setVisibleExperiences(prev => prev + 1); } }
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onloadend = () => { const base64String = reader.result as string; setPhotoPreview(base64String); setFormData(prev => ({ ...prev, fotoCandidato: base64String })); }; reader.readAsDataURL(file); };
+  const removePhoto = () => { setPhotoPreview(null); setFormData(prev => ({ ...prev, fotoCandidato: '' })); };
+  const buscarCep = async () => { const cep = formData.cepCandidato.replace(/\D/g, ''); if (cep.length !== 8) return; try { const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`); const data = await response.json(); if (!data.erro) { setFormData(prev => ({ ...prev, ruaCandidato: data.logradouro, bairroCandidato: data.bairro, cidadeCandidato: data.localidade, estadoCandidato: data.uf })); } } catch (error) { console.error('Erro ao buscar CEP:', error) } };
+  
+  // FUNÇÃO DE VALIDAÇÃO MODIFICADA PARA USAR 'toast'
+  const validateForm = () => {
+    const requiredFields: { [key: string]: { label: string; tab: TabId } } = {
+      nomeCandidato: { label: 'Nome Completo', tab: 'pessoal' },
+      emailCandidato: { label: 'Email', tab: 'pessoal' },
+      datanascimentoCandidato: { label: 'Data de Nascimento', tab: 'pessoal' },
+      telefoneCandidato: { label: 'Telefone Principal', tab: 'pessoal' },
+      sexoCandidato: { label: 'Sexo', tab: 'pessoal' },
+      estadocivilCandidato: { label: 'Estado Civil', tab: 'pessoal' },
+      cpfCandidato: { label: 'CPF', tab: 'documentos' },
+      rgCandidato: { label: 'RG', tab: 'documentos' },
+      cnhCandidato: { label: 'Possui CNH?', tab: 'documentos' },
+      pcdCandidato: { label: 'Pessoa com Deficiência (PCD)?', tab: 'documentos' },
+      cepCandidato: { label: 'CEP', tab: 'endereco' },
+      ruaCandidato: { label: 'Rua', tab: 'endereco' },
+      numeroCandidato: { label: 'Número', tab: 'endereco' },
+      bairroCandidato: { label: 'Bairro', tab: 'endereco' },
+      cidadeCandidato: { label: 'Cidade', tab: 'endereco' },
+      estadoCandidato: { label: 'Estado', tab: 'endereco' },
+      escolaridadeCandidato: { label: 'Escolaridade', tab: 'formacao' },
+      vagainteresseCandidato: { label: 'Vaga de Interesse', tab: 'formacao' },
+      possuiexperienciaCandidato: { label: 'Possui experiência profissional?', tab: 'experiencia' },
+    };
+
+    for (const field in requiredFields) {
+      if (!formData[field as keyof typeof formData]) {
+        // Alerta trocado por toast.error
+        toast.error(`O campo "${requiredFields[field].label}" é obrigatório.`);
+        setActiveTab(requiredFields[field].tab);
+        return false;
+      }
+    }
+
+    // Validações condicionais
+    if (formData.sexoCandidato === 'Outro' && !formData.outrosexoCandidato) {
+      toast.error('O campo "Especifique o Sexo" é obrigatório.');
+      setActiveTab('pessoal');
+      return false;
+    }
+    if (formData.cnhCandidato === 'Sim' && !formData.categoriacnhCandidato) {
+      toast.error('O campo "Categoria CNH" é obrigatório.');
+      setActiveTab('documentos');
+      return false;
+    }
+    if (formData.pcdCandidato === 'Sim' && !formData.cidareacandidato) {
+      toast.error('O campo "Qual o CID?" é obrigatório.');
+      setActiveTab('documentos');
+      return false;
+    }
+    if (formData.conhecimentosinformaticaCandidato.includes('Outros') && !formData.conhecimentoinfcandidato) {
+      toast.error('O campo "Especifique outros conhecimentos" é obrigatório.');
+      setActiveTab('formacao');
+      return false;
+    }
+    if (formData.possuiexperienciaCandidato === 'Sim' && !formData.empresaCandidato) {
+      toast.error('Pelo menos a primeira experiência profissional precisa ser preenchida.');
+      setActiveTab('experiencia');
+      return false;
+    }
+    
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => { 
+    e.preventDefault(); 
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true); 
+    try { 
+      const res = await fetch('/api/candidatos/publico', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...formData, conhecimentosinformaticaCandidato: formData.conhecimentosinformaticaCandidato.join(', '), vagaId, situacaoCandidato: 'Em processo' }), }); 
+      if (res.ok) { 
+        // Toast de sucesso!
+        toast.success('Candidatura enviada com sucesso!');
+        router.push(`/obrigado`); 
+      } else { 
+        const errorData = await res.json();
+        // Toast de erro da API
+        toast.error(errorData.error || 'Erro ao enviar candidatura.');
+        throw new Error(errorData.error || 'Erro ao enviar candidatura.'); 
+      } 
+    } catch (error) { 
+      console.error(error); 
+    } finally { 
+      setLoading(false); 
+    } 
+  };
+
+  return (
+    <div className="mx-auto max-w-5xl rounded-lg bg-white p-6 shadow-xl sm:p-8"><div className="mb-8 text-center"><h1 className="text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">Formulário de Candidatura</h1><p className="mt-2 text-gray-600">Preencha os campos abaixo para se candidatar à vaga.</p></div><div className="mb-8 flex items-start justify-center">{TABS_CONFIG.map((tab, index) => (<div key={tab.id} className="flex flex-1 items-center"><div className="flex flex-col items-center" ><button onClick={() => setActiveTab(tab.id)} className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all sm:h-12 sm:w-12 ${activeTab === tab.id ? 'border-indigo-600 bg-indigo-600 text-white' : TABS_CONFIG.findIndex(t => t.id === activeTab) > index ? 'border-indigo-600 bg-white text-indigo-600' : 'border-gray-300 bg-white text-gray-400 hover:border-gray-400'}`}>{TABS_CONFIG.findIndex(t => t.id === activeTab) > index ? <CheckCircle size={24} /> : <tab.icon size={20} />}</button><p className={`mt-2 hidden text-center text-xs font-medium sm:block sm:text-sm ${activeTab === tab.id || TABS_CONFIG.findIndex(t => t.id === activeTab) > index ? 'text-indigo-600' : 'text-gray-500'}`}>{tab.label}</p></div>{index < TABS_CONFIG.length - 1 && <div className={`mt-5 h-0.5 flex-1 sm:mt-6 ${TABS_CONFIG.findIndex(t => t.id === activeTab) > index ? 'bg-indigo-600' : 'bg-gray-200'}`}></div>}</div>))}</div>
+      <form onSubmit={handleSubmit} noValidate className="space-y-12">
+        {/* O restante do seu JSX permanece exatamente o mesmo */}
+        {activeTab === 'pessoal' && (<section><h2 className="text-xl font-semibold text-gray-700 border-b pb-4 mb-6">Dados Pessoais e Contato</h2><div className="grid grid-cols-1 gap-x-6 gap-y-8 md:grid-cols-6"><div className="col-span-full"><label className="block text-sm font-medium leading-6 text-gray-900">Foto de Perfil</label><div className="mt-2 flex items-center gap-x-3">{photoPreview ? <div className="relative"><img src={photoPreview} alt="Prévia" className="h-24 w-24 rounded-full object-cover" /><button type="button" onClick={removePhoto} className="absolute -right-1 -top-1 rounded-full bg-white p-0.5 text-gray-500 shadow-sm hover:bg-gray-100"><X size={16} /></button></div> : <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gray-100 text-gray-400"><User size={48} /></div>}<label htmlFor="photo-upload" className="cursor-pointer rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"><UploadCloud className="mr-2 inline-block" size={16}/><span>{photoPreview ? 'Trocar foto' : 'Enviar foto'}</span><input id="photo-upload" name="fotoCandidato" type="file" className="sr-only" accept="image/*" onChange={handlePhotoChange} /></label></div></div><div className="sm:col-span-full"><FormField id="nomeCandidato" label="Nome Completo" required><input type="text" name="nomeCandidato" id="nomeCandidato" value={formData.nomeCandidato} onChange={handleChange} required className={inputClasses}/></FormField></div><div className="sm:col-span-3"><FormField id="emailCandidato" label="Email" required><input id="emailCandidato" name="emailCandidato" type="email" value={formData.emailCandidato} onChange={handleChange} required className={inputClasses}/></FormField></div><div className="sm:col-span-3"><FormField id="datanascimentoCandidato" label="Data de Nascimento" required><input type="date" name="datanascimentoCandidato" id="datanascimentoCandidato" value={formData.datanascimentoCandidato} onChange={handleChange} required className={inputClasses}/></FormField></div>
+        <div className="sm:col-span-3"><FormField id="telefoneCandidato" label="Telefone Principal" required>
+          <IMaskInput
+            mask="(00) 00000-0000"
+            id="telefoneCandidato"
+            name="telefoneCandidato"
+            value={formData.telefoneCandidato}
+            onAccept={(value) => handleChange({ target: { name: 'telefoneCandidato', value } })}
+            type="tel"
+            required
+            className={inputClasses}
+          />
+        </FormField></div>
+        <div className="sm:col-span-3"><FormField id="telefone2Candidato" label="Telefone Secundário (Opcional)">
+        <IMaskInput
+            mask="(00) 00000-0000"
+            id="telefone2Candidato"
+            name="telefone2Candidato"
+            value={formData.telefone2Candidato}
+            onAccept={(value) => handleChange({ target: { name: 'telefone2Candidato', value } })}
+            type="tel"
+            className={inputClasses}
+          />
+        </FormField></div>
+        <div className="sm:col-span-3"><FormField id="sexoCandidato" label="Sexo" required><select name="sexoCandidato" id="sexoCandidato" value={formData.sexoCandidato} onChange={handleChange} required className={inputClasses}><option value="">Selecione</option><option value="Masculino">Masculino</option><option value="Feminino">Feminino</option><option value="Outro">Outro</option></select></FormField></div>{formData.sexoCandidato === 'Outro' && <div className="sm:col-span-3"><FormField id="outrosexoCandidato" label="Especifique" required><input type="text" name="outrosexoCandidato" id="outrosexoCandidato" value={formData.outrosexoCandidato} onChange={handleChange} required className={inputClasses}/></FormField></div>}<div className="sm:col-span-3"><FormField id="estadocivilCandidato" label="Estado Civil" required><select name="estadocivilCandidato" id="estadocivilCandidato" value={formData.estadocivilCandidato} onChange={handleChange} required className={inputClasses}><option value="">Selecione</option><option value="Solteiro(a)">Solteiro(a)</option><option value="Casado(a)">Casado(a)</option><option value="Divorciado(a)">Divorciado(a)</option><option value="Viúvo(a)">Viúvo(a)</option><option value="União Estável">União Estável</option></select></FormField></div></div></section>)}
+        {activeTab === 'documentos' && (<section><h2 className="text-xl font-semibold text-gray-700 border-b pb-4 mb-6">Documentos e Redes Sociais</h2><div className="grid grid-cols-1 gap-x-6 gap-y-8 md:grid-cols-6">
+        <div className="sm:col-span-3"><FormField id="cpfCandidato" label="CPF" required>
+          <IMaskInput
+            mask="000.000.000-00"
+            id="cpfCandidato"
+            name="cpfCandidato"
+            value={formData.cpfCandidato}
+            onAccept={(value) => handleChange({ target: { name: 'cpfCandidato', value } })}
+            type="text"
+            required
+            className={inputClasses}
+          />
+        </FormField></div>
+        <div className="sm:col-span-3"><FormField id="rgCandidato" label="RG" required>
+          <IMaskInput
+            mask="00.000.000-0"
+            id="rgCandidato"
+            name="rgCandidato"
+            value={formData.rgCandidato}
+            onAccept={(value) => handleChange({ target: { name: 'rgCandidato', value } })}
+            type="text"
+            required
+            className={inputClasses}
+          />
+        </FormField></div>
+        <div className="sm:col-span-3"><FormField id="cnhCandidato" label="Possui CNH?" required><select name="cnhCandidato" id="cnhCandidato" value={formData.cnhCandidato} onChange={handleChange} required className={inputClasses}><option value="">Selecione</option><option value="Sim">Sim</option><option value="Não">Não</option></select></FormField></div>{formData.cnhCandidato === 'Sim' && <div className="sm:col-span-3"><FormField id="categoriacnhCandidato" label="Categoria CNH" required><select name="categoriacnhCandidato" id="categoriacnhCandidato" value={formData.categoriacnhCandidato} onChange={handleChange} required className={inputClasses}><option value="">Selecione</option><option value="A">A</option><option value="B">B</option><option value="AB">AB</option><option value="C">C</option><option value="D">D</option><option value="E">E</option></select></FormField></div>}<div className="sm:col-span-3"><FormField id="pcdCandidato" label="Pessoa com Deficiência (PCD)?" required><select name="pcdCandidato" id="pcdCandidato" value={formData.pcdCandidato} onChange={handleChange} required className={inputClasses}><option value="">Selecione</option><option value="Sim">Sim</option><option value="Não">Não</option></select></FormField></div>{formData.pcdCandidato === 'Sim' && <div className="sm:col-span-3"><FormField id="cidareacandidato" label="Qual o CID?" required><input type="text" name="cidareacandidato" id="cidareacandidato" value={formData.cidareacandidato} onChange={handleChange} required className={inputClasses}/></FormField></div>}<div className="sm:col-span-full border-t border-gray-900/10"></div><div className="sm:col-span-2"><FormField id="linkedinCandidato" label="LinkedIn"><input type="url" name="linkedinCandidato" id="linkedinCandidato" value={formData.linkedinCandidato} onChange={handleChange} placeholder="https://linkedin.com/in/..." className={inputClasses}/></FormField></div><div className="sm:col-span-2"><FormField id="facebookCandidato" label="Facebook"><input type="url" name="facebookCandidato" id="facebookCandidato" value={formData.facebookCandidato} onChange={handleChange} placeholder="https://facebook.com/..." className={inputClasses}/></FormField></div><div className="sm:col-span-2"><FormField id="instagramCandidato" label="Instagram"><input type="url" name="instagramCandidato" id="instagramCandidato" value={formData.instagramCandidato} onChange={handleChange} placeholder="https://instagram.com/..." className={inputClasses}/></FormField></div></div></section>)}
+        {activeTab === 'endereco' && (<section><h2 className="text-xl font-semibold text-gray-700 border-b pb-4 mb-6">Endereço</h2><div className="grid grid-cols-1 gap-x-6 gap-y-8 md:grid-cols-6">
+        <div className="sm:col-span-2"><FormField id="cepCandidato" label="CEP" required>
+          <IMaskInput
+            mask="00000-000"
+            id="cepCandidato"
+            name="cepCandidato"
+            value={formData.cepCandidato}
+            onAccept={(value) => handleChange({ target: { name: 'cepCandidato', value } })}
+            onBlur={buscarCep}
+            type="text"
+            required
+            placeholder="00000-000"
+            className={inputClasses}
+          />
+        </FormField></div>
+        <div className="sm:col-span-4"><FormField id="ruaCandidato" label="Rua" required><input type="text" name="ruaCandidato" id="ruaCandidato" value={formData.ruaCandidato} onChange={handleChange} required className={inputClasses}/></FormField></div><div className="sm:col-span-2"><FormField id="numeroCandidato" label="Número" required><input type="text" name="numeroCandidato" id="numeroCandidato" value={formData.numeroCandidato} onChange={handleChange} required className={inputClasses}/></FormField></div><div className="sm:col-span-4"><FormField id="bairroCandidato" label="Bairro" required><input type="text" name="bairroCandidato" id="bairroCandidato" value={formData.bairroCandidato} onChange={handleChange} required className={inputClasses}/></FormField></div><div className="sm:col-span-3"><FormField id="cidadeCandidato" label="Cidade" required><input type="text" name="cidadeCandidato" id="cidadeCandidato" value={formData.cidadeCandidato} onChange={handleChange} required className={inputClasses}/></FormField></div><div className="sm:col-span-3"><FormField id="estadoCandidato" label="Estado" required><input type="text" name="estadoCandidato" id="estadoCandidato" value={formData.estadoCandidato} onChange={handleChange} required className={inputClasses}/></FormField></div></div></section>)}
+        {activeTab === 'formacao' && (<section><h2 className="text-xl font-semibold text-gray-700 border-b pb-4 mb-6">Formação e Habilidades</h2><div className="grid grid-cols-1 gap-x-6 gap-y-8 md:grid-cols-2"><FormField id="escolaridadeCandidato" label="Escolaridade" required><select name="escolaridadeCandidato" id="escolaridadeCandidato" value={formData.escolaridadeCandidato} onChange={handleChange} required className={inputClasses}><option value="">Selecione</option><option value="Ensino Fundamental">Ensino Fundamental</option><option value="Ensino Médio">Ensino Médio</option><option value="Ensino Técnico">Ensino Técnico</option><option value="Ensino Superior">Ensino Superior</option><option value="Pós-Graduação">Pós-Graduação</option><option value="Mestrado">Mestrado</option><option value="Doutorado">Doutorado</option></select></FormField><FormField id="vagainteresseCandidato" label="Vaga de Interesse" required><select name="vagainteresseCandidato" id="vagainteresseCandidato" value={formData.vagainteresseCandidato} onChange={handleChange} required className={inputClasses}><option value="">Selecione</option><option value="Administrativo">Administrativo</option><option value="Reposição">Reposição</option><option value="Expedição">Expedição</option><option value="Recebimento">Recebimento</option><option value="Entrega">Entrega</option><option value="Financeiro">Financeiro</option><option value="Compras">Compras</option><option value="Fiscal">Fiscal</option><option value="Vendas">Vendas</option><option value="Marketing">Marketing</option><option value="Conferência">Conferência</option><option value="RH">RH</option><option value="TI">TI</option></select></FormField><div className="md:col-span-2"><FormField id="conhecimentosCandidato" label="Diferencial / Resumo Profissional"><textarea name="conhecimentosCandidato" id="conhecimentosCandidato" value={formData.conhecimentosCandidato} onChange={handleChange} rows={4} className={inputClasses}/></FormField></div><div className="md:col-span-2 space-y-4 rounded-lg border border-gray-200 p-4"><h3 className="text-base font-semibold text-gray-800">Conhecimentos em Informática</h3><div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <FormField id="wordCandidato" label="Word"><select name="wordCandidato" value={formData.wordCandidato} onChange={handleChange} className={inputClasses}><option value="Desconheço">Desconheço</option><option value="Básico">Básico</option><option value="Intermediário">Intermediário</option><option value="Avançado">Avançado</option></select></FormField>
+          <FormField id="excelCandidato" label="Excel"><select name="excelCandidato" value={formData.excelCandidato} onChange={handleChange} className={inputClasses}><option value="Desconheço">Desconheço</option><option value="Básico">Básico</option><option value="Intermediário">Intermediário</option><option value="Avançado">Avançado</option></select></FormField>
+          <FormField id="powerpointCandidato" label="PowerPoint"><select name="powerpointCandidato" value={formData.powerpointCandidato} onChange={handleChange} className={inputClasses}><option value="Desconheço">Desconheço</option><option value="Básico">Básico</option><option value="Intermediário">Intermediário</option><option value="Avançado">Avançado</option></select></FormField>
+        </div><div className="pt-4"><label className="block text-sm font-medium leading-6 text-gray-900 mb-2">Outras Ferramentas</label><div className="grid grid-cols-2 gap-x-4 gap-y-2"> {['AutoCAD', 'Corel Draw', 'Photoshop', 'Programação', 'Edição de Vídeos', 'Outros'].map(opcao => (<label key={opcao} className="flex items-center gap-2 text-sm text-gray-800 font-medium"><input type="checkbox" name="conhecimentosinformaticaCandidato" value={opcao} checked={formData.conhecimentosinformaticaCandidato.includes(opcao)} onChange={handleChange} className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"/>{opcao}</label>))}</div></div>
+        {formData.conhecimentosinformaticaCandidato.includes('Outros') && <div className="pt-2">
+          <FormField id="conhecimentoinfcandidato" label="Especifique outros conhecimentos" required={true}>
+            <textarea name="conhecimentoinfcandidato" value={formData.conhecimentoinfcandidato} onChange={handleChange} rows={2} required className={inputClasses}/>
+          </FormField>
+        </div>}
+        </div></div></section>)}
+        {activeTab === 'experiencia' && (<section><h2 className="text-xl font-semibold text-gray-700 border-b pb-4 mb-6">Experiência Profissional</h2><FormField id="possuiexperienciaCandidato" label="Possui experiência profissional?" required><select name="possuiexperienciaCandidato" id="possuiexperienciaCandidato" value={formData.possuiexperienciaCandidato} onChange={handleChange} required className="block w-full max-w-sm rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600"><option value="">Selecione</option><option value="Sim">Sim</option><option value="Não">Não</option></select></FormField>{formData.possuiexperienciaCandidato === 'Sim' && (<div className="space-y-8 mt-6">{[...Array(visibleExperiences)].map((_, i) => <ExperienciaFields key={i} index={i + 1} formData={formData} handleChange={handleChange} />)}{visibleExperiences < 3 && (<div className="flex justify-center"><button type="button" onClick={handleAddExperience} className="inline-flex items-center gap-2 rounded-md bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-600 shadow-sm hover:bg-indigo-100"><PlusCircle size={16} />Adicionar mais experiência</button></div>)}</div>)}</section>)}
+        {activeTab === 'outros' && (<section className="space-y-6 text-center"><CheckCircle className="mx-auto h-16 w-16 text-green-500" /><h2 className="text-2xl font-semibold text-gray-800">Tudo pronto!</h2><p className="text-gray-600">Revise suas informações se necessário clicando nas etapas acima. <br/> Quando estiver tudo certo, clique no botão abaixo para enviar sua candidatura.</p><div className="mx-auto max-w-md rounded-lg border border-gray-200 bg-gray-50 p-4 text-left"><h3 className="font-semibold text-gray-900">Suas Informações:</h3><p className="text-sm text-gray-600"><span className="font-medium">Nome:</span> {formData.nomeCandidato || 'Não preenchido'}</p><p className="text-sm text-gray-600"><span className="font-medium">Email:</span> {formData.emailCandidato || 'Não preenchido'}</p></div></section>)}
+        <div className="flex items-center justify-between border-t border-gray-900/10 pt-6"><div>{activeTab !== 'pessoal' && (<button type="button" onClick={() => handleTabNavigation('prev')} className="inline-flex items-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"><ArrowLeft size={16} /> Anterior</button>)}</div><div>{activeTab !== 'outros' ? (<button type="button" onClick={() => handleTabNavigation('next')} className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Próximo <ArrowRight size={16} /></button>) : (<button type="submit" disabled={loading} className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600 disabled:opacity-50">{loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enviando...</> : 'Enviar Candidatura'}</button>)}</div></div>
+      </form>
+    </div>
+  )
 }

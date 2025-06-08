@@ -2,10 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import toast from 'react-hot-toast' // Usaremos para notificações
-import { Briefcase, Save, Loader2 } from 'lucide-react' // Ícones para um visual melhor
+import toast from 'react-hot-toast'
+import { Briefcase, Save, Loader2 } from 'lucide-react'
 
-// Componente simples para padronizar os campos do formulário
+// Componente auxiliar. Nenhuma mudança aqui.
 function FormField({ label, children, required = false }: { label: string, children: React.ReactNode, required?: boolean }) {
   return (
     <div>
@@ -20,7 +20,8 @@ function FormField({ label, children, required = false }: { label: string, child
   )
 }
 
-export default function NovaVagaPage() {
+// ALTERAÇÃO 1: Nome do componente e props
+export default function NovaVagaForm({ onSuccess }: { onSuccess: () => void }) {
   const [titulo, setTitulo] = useState('')
   const [descricao, setDescricao] = useState('')
   const [loading, setLoading] = useState(false)
@@ -29,7 +30,6 @@ export default function NovaVagaPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Validação simples para feedback claro
     if (!titulo.trim()) {
       toast.error('O título da vaga é obrigatório.');
       return;
@@ -45,12 +45,13 @@ export default function NovaVagaPage() {
       })
 
       if (res.ok) {
-        // Feedback de sucesso antes de redirecionar
         toast.success('Vaga criada com sucesso!')
-        router.push('/dashboard/vagas') // Recomendo redirecionar para a lista de vagas
-        router.refresh() // Garante que a lista de vagas será atualizada
+        
+        // ALTERAÇÃO 2: Ação de sucesso foi modificada
+        router.refresh() // Mantém para atualizar a lista de vagas na página principal
+        onSuccess()      // Chama a função para fechar a modal
+        
       } else {
-        // Feedback de erro mais amigável
         toast.error('Não foi possível criar a vaga. Tente novamente.')
       }
     } catch (error) {
@@ -61,21 +62,17 @@ export default function NovaVagaPage() {
     }
   }
 
-  // Estilos padronizados para os inputs
-  const inputClasses = "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+  const inputClasses = "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-3"
 
+  // ALTERAÇÃO 3: Layout de página removido. Retornamos o conteúdo diretamente.
   return (
-    // Layout principal da página
-    <div className="container mx-auto max-w-3xl py-10 px-4">
-      
-      {/* Título da página com ícone */}
+    <div className="w-full">
       <div className="flex items-center space-x-3 mb-8">
         <Briefcase className="h-8 w-8 text-indigo-600" />
         <h1 className="text-3xl font-bold text-gray-800">Cadastrar Nova Vaga</h1>
       </div>
 
-      {/* Card do formulário com design aprimorado */}
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-lg border border-gray-200">
+      <form onSubmit={handleSubmit}>
         <div className="space-y-6">
           <FormField label="Título da Vaga" required>
             <input
@@ -99,12 +96,11 @@ export default function NovaVagaPage() {
           </FormField>
         </div>
 
-        {/* Seção do botão de salvar */}
         <div className="flex justify-end pt-8 mt-8 border-t border-gray-200">
           <button
             type="submit"
             disabled={loading}
-            className="inline-flex items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <>
