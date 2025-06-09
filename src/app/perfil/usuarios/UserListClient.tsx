@@ -8,6 +8,7 @@ import { KeyRound, X, LoaderCircle, Save } from 'lucide-react';
 
 // --- Sub-componente: Switch para autorizar/desautorizar ---
 function ToggleAuth({ isAuthorized, onChange, disabled }: { isAuthorized: boolean, onChange: () => void, disabled: boolean }) {
+  // ... Nenhuma alteração aqui ...
   return (
     <button
       type="button"
@@ -38,8 +39,10 @@ function ChangePasswordModal({ user, onClose, onSave }: { user: UserForList, onC
   };
   
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={onClose}>
-      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md animate-fade-in" onClick={(e) => e.stopPropagation()}>
+    // 1. Fundo (Overlay)
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+      {/* 2. Janela do Modal */}
+      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md animate-scale-in" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-bold text-gray-800">Alterar Senha</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={24}/></button>
@@ -51,7 +54,7 @@ function ChangePasswordModal({ user, onClose, onSave }: { user: UserForList, onC
             type="password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            className="mt-1 block p-3 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             placeholder="Mínimo de 6 caracteres"
           />
         </div>
@@ -69,6 +72,7 @@ function ChangePasswordModal({ user, onClose, onSave }: { user: UserForList, onC
 
 // --- Componente Principal da Lista de Usuários ---
 export default function UserListClient({ initialUsers }: { initialUsers: UserForList[] }) {
+    // ... Nenhuma alteração aqui ...
     const [users, setUsers] = useState(initialUsers);
     const [isUpdating, startTransition] = useTransition();
     const [selectedUserForPassword, setSelectedUserForPassword] = useState<UserForList | null>(null);

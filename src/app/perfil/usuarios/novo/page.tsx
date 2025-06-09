@@ -128,7 +128,7 @@ export default function NovoUsuarioPage() {
 
       if (res.ok) {
         toast.success(`Usuário "${data.nome}" criado com sucesso!`);
-        router.push('/dashboard/usuarios');
+        router.push('/perfil/usuarios');
         router.refresh();
       } else {
         toast.error(data.error || 'Não foi possível criar o usuário.');
@@ -140,7 +140,7 @@ export default function NovoUsuarioPage() {
     }
   }
 
-  const inputClasses = "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5"
+  const inputClasses = "block w-full text-gray-500 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5"
 
   return (
     <div className="container mx-auto max-w-3xl py-10 px-4">
