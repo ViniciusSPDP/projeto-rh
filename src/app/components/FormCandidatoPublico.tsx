@@ -121,7 +121,7 @@ export default function FormCandidatoPublico({ vagaId }: { vagaId?: number }) {
   const validateForm = () => {
     const requiredFields: { [key: string]: { label: string; tab: TabId } } = {
       nomeCandidato: { label: 'Nome Completo', tab: 'pessoal' },
-      emailCandidato: { label: 'Email', tab: 'pessoal'Q },
+      emailCandidato: { label: 'Email', tab: 'pessoal'},
       datanascimentoCandidato: { label: 'Data de Nascimento', tab: 'pessoal' },
       telefoneCandidato: { label: 'Telefone Principal', tab: 'pessoal' },
       sexoCandidato: { label: 'Sexo', tab: 'pessoal' },
