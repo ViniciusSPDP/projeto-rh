@@ -1,8 +1,11 @@
 import prisma from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const id = Number(params.id)
+export async function PATCH(
+  req: NextRequest,
+  context: { params: { id: string } }
+) {
+  const id = Number(context.params.id)
   const data = await req.json()
 
   const parsedData = {
