@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
-import { Menu as MenuIcon, X, LogOut, User, Settings, ChevronDown, Bell, Search, Briefcase, Users } from 'lucide-react'
+import { Menu as MenuIcon, X, LogOut, User, Settings, ChevronDown, Bell, Search, Briefcase, Users, UserPlus } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -14,7 +14,6 @@ export default function Menu() {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   
   const pathname = usePathname()
-  const router = useRouter()
   const { data: session } = useSession()
 
   const profileRef = useRef<HTMLDivElement>(null)
@@ -52,17 +51,24 @@ export default function Menu() {
     { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: Briefcase },
     { id: 'vagas', label: 'Vagas', href: '/vagas', icon: Briefcase },
     { id: 'candidatos', label: 'Candidatos', href: '/candidatos', icon: Users },
+    { id: 'usuarios', label: 'Usuários', href: '/perfil/usuarios', icon: UserPlus },
   ]
   
   const handleSignOut = async () => {
     await signOut({ redirect: true, callbackUrl: '/login' });
   }
 
+  // Se a sessão ainda estiver carregando, não renderiza nada para evitar piscar a tela
   if (!session) {
     return null;
   }
   
   const user = session.user;
+
+  // --- LÓGICA DA IMAGEM ---
+  // A URL da imagem agora aponta para a nossa API, que decide se mostra
+  // a foto do usuário ou a imagem padrão.
+  const userImageSrc = '/api/user/avatar';
 
   return (
     <header className="bg-white text-slate-800 shadow-md sticky top-0 z-40 border-b border-slate-200">
@@ -106,11 +112,12 @@ export default function Menu() {
                 >
                   {/* --- ALTERAÇÃO 1 AQUI --- */}
                   <Image
-                    src={'/user-placeholder.png'}
+                    key={user.id} // Adicionar uma chave ajuda o Next.js a recarregar a imagem se o usuário mudar
+                    src={userImageSrc}
                     alt="Foto do usuário"
                     width={32}
                     height={32}
-                    className="rounded-full"
+                    className="rounded-full object-cover"
                   />
                   <span className="font-semibold text-sm text-slate-700 hidden lg:block">{user?.name?.split(' ')[0]}</span>
                   <ChevronDown 
@@ -125,11 +132,12 @@ export default function Menu() {
                       <div className="flex items-center gap-3">
                         {/* --- ALTERAÇÃO 2 AQUI --- */}
                         <Image
-                          src={'/user-placeholder.png'}
+                          key={`${user.id}-dropdown`} // Chave única para esta imagem
+                          src={userImageSrc}
                           alt="Foto do usuário"
                           width={48}
                           height={48}
-                          className="rounded-full"
+                          className="rounded-full object-cover"
                         />
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-gray-900 truncate">{user?.name}</div>

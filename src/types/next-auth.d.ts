@@ -10,16 +10,16 @@ declare module "next-auth" {
   interface Session {
     user: {
       id: string;
-      fotourl?: string | null; // <-- ADICIONADO
+      //fotourl?: string | null; // <-- ADICIONADO
     } & DefaultSession["user"] // Mantém as propriedades padrão (name, email, image)
   }
 
   /**
    * O objeto `user` que vem do banco de dados através do `authorize`.
    */
-  interface User extends DefaultUser {
-    fotourl?: string | null; // <-- ADICIONADO
-  }
+  //interface User extends DefaultUser {
+   // fotourl?: string | null; // <-- ADICIONADO
+  //}
 }
 
 /**

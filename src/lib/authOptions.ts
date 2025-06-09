@@ -33,43 +33,33 @@ export const authOptions: NextAuthOptions = {
           user.autorizado &&
           await bcrypt.compare(credentials.senha, user.senhahash)
         ) {
-          // --- ALTERAÇÃO: Adicionando 'fotourl' explicitamente ---
-          // Isso garante que o objeto 'user' tenha a propriedade 'fotourl'
+          // A fotourl NÃO precisa mais ser retornada aqui
           return {
             id: String(user.id),
             name: user.nome,
             email: user.email,
-            image: user.fotourl, // next-auth usa 'image' por padrão
-            fotourl: user.fotourl, // nossa propriedade customizada
           }
         }
-
         return null
       },
     }),
   ],
 
   callbacks: {
-    // O callback 'jwt' é chamado após o 'authorize'
+    // A fotourl NÃO é mais adicionada ao token
     async jwt({ token, user }) {
-      // O objeto 'user' só está disponível no primeiro login
       if (user) {
         token.id = user.id
-        // --- ALTERAÇÃO: Passando a fotourl para o token ---
-        token.fotourl = user.fotourl
       }
       return token
     },
-    // O callback 'session' usa os dados do token para montar a sessão do cliente
+    // A fotourl NÃO é mais adicionada à sessão
     async session({ session, token }) {
       if (token?.id && session.user) {
-        session.user.id = token.id
-        // --- ALTERAÇÃO: Passando a fotourl do token para a sessão final ---
-        session.user.fotourl = token.fotourl
+        session.user.id = String(token.id)
       }
       return session
     },
   },
-  secret: process.env.NEXTAUTH_SECRET, // Não se esqueça de definir esta variável no seu .env
-  // pages: { signIn: '/login' }, // Esta linha parece duplicada, removi
+  secret: process.env.NEXTAUTH_SECRET,
 }
