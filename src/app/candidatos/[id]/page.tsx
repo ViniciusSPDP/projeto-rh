@@ -12,7 +12,7 @@ export default async function Page({ params }: { params: { id: string } }) {
     where: { idCandidato: id },
   })
 
-  if (!candidato) return notFound()
+  if (!candidato) return notFsound()
 
   return <DetalhesCandidato candidato={candidato} />
 }

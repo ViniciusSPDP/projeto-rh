@@ -2,7 +2,7 @@
 import prisma from '@/lib/prisma'
 import { Candidatos } from '@/generated/prisma'
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight, User, Search, Filter, CircleCheck, CircleX, Loader } from 'lucide-react'
+import { ChevronLeft, ChevronRight, User, Search, Filter, CircleCheck, CircleX, Loader, Cog } from 'lucide-react'
 
 export const dynamic = 'force-dynamic' // Garante SSR atualizado a cada acesso
 
@@ -101,6 +101,8 @@ export default async function CandidatosPage({
         return 'bg-green-100 text-green-800'
       case 'reprovado':
         return 'bg-red-100 text-red-800'
+      case 'em processo':
+        return 'bg-purple-100 text-purple-800'
       default:
         return 'bg-gray-100 text-gray-800'
     }
@@ -126,7 +128,8 @@ export default async function CandidatosPage({
     { value: "Aprovado", label: "Aprovado" },
     { value: "Reprovado", label: "Reprovado" },
     { value: "Contratado", label: "Contratado" },
-    { value: "Em Análise", label: "Em Análise" },
+    { value: "Em análise", label: "Em análise" },
+    { value: "Em processo", label: "Em processo" }, // Nova opção
   ]
 
   return (
@@ -267,7 +270,9 @@ export default async function CandidatosPage({
                         <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${getSituacaoStyle(candidato.situacaoCandidato)}`}>
                           {candidato.situacaoCandidato === 'Aprovado' && <CircleCheck className="w-4 h-4" />}
                           {candidato.situacaoCandidato === 'Reprovado' && <CircleX className="w-4 h-4" />}
-                          {candidato.situacaoCandidato === 'Em Análise' && <Loader className="w-4 h-4 animate-spin" />}
+                          {candidato.situacaoCandidato === 'Em análise' && <Loader className="w-4 h-4 animate-spin" />}
+                          {candidato.situacaoCandidato === 'Em processo' && <Cog className="w-4 h-4 animate-spin" />}
+
                           {candidato.situacaoCandidato}
                         </span>
                       </td>
