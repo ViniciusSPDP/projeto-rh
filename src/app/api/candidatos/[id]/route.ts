@@ -1,12 +1,9 @@
-import prisma from '@/lib/prisma'
 import { NextRequest } from 'next/server'
+import prisma from '@/lib/prisma'
 
-export async function PATCH(
-  req: NextRequest,
-  context: { params: { id: string } }
-) {
+export async function PATCH(request: Request, context: { params: { id: string } }) {
   const id = Number(context.params.id)
-  const data = await req.json()
+  const data = await request.json()
 
   const parsedData = {
     ...data,
@@ -32,11 +29,10 @@ export async function PATCH(
     return new Response(
       JSON.stringify({
         ...candidato,
-        idCandidato: candidato.idCandidato.toString(), // 👈 converte
+        idCandidato: candidato.idCandidato.toString(),
       }),
       { status: 200 }
     )
-    
   } catch (error) {
     console.error('Erro ao atualizar candidato:', error)
     return new Response('Erro ao atualizar candidato', { status: 500 })
