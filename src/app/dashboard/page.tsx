@@ -72,14 +72,14 @@ export default async function DashboardPage() {
             <p className="text-slate-600">Acompanhe suas métricas de recrutamento em tempo real</p>
           </div>
           <div className="mt-4 sm:mt-0 flex gap-3">
-            <Link 
+            <Link
               href="/candidatos/novo"
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2"
             >
               <Users size={20} />
               Novo Candidato
             </Link>
-            <Link 
+            <Link
               href="/relatorios"
               className="bg-white hover:bg-gray-50 text-slate-700 px-4 py-2 rounded-lg font-medium border border-gray-200 transition-colors duration-200 flex items-center gap-2"
             >
@@ -174,7 +174,7 @@ export default async function DashboardPage() {
           <div className="p-6 border-b border-gray-100">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-slate-800">Últimos Candidatos</h2>
-              <Link 
+              <Link
                 href="/candidatos"
                 className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center gap-1"
               >
@@ -189,17 +189,20 @@ export default async function DashboardPage() {
                 <div key={c.idCandidato} className="flex items-center justify-between p-4 hover:bg-slate-50 rounded-lg transition-colors duration-200 border border-transparent hover:border-slate-200">
                   <div className="flex items-center space-x-4">
                     <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                      {c.nomeCandidato.charAt(0).toUpperCase()}
+                      {/* CORREÇÃO AQUI */}
+                      {c.nomeCandidato?.charAt(0).toUpperCase() ?? '?'}
                     </div>
                     <div>
                       <Link
                         href={`/candidatos/${c.idCandidato}`}
                         className="text-slate-800 hover:text-blue-600 font-medium transition-colors duration-200"
                       >
-                        {c.nomeCandidato}
+                        {/* CORREÇÃO AQUI */}
+                        {c.nomeCandidato ?? 'Candidato sem nome'}
                       </Link>
                       <p className="text-sm text-slate-500 mt-1">
-                        Cadastrado em {new Date(c.created_at).toLocaleDateString('pt-BR')}
+                        {/* A data também precisa de uma verificação, por segurança */}
+                        Cadastrado em {c.created_at ? new Date(c.created_at).toLocaleDateString('pt-BR') : 'Data desconhecida'}
                       </p>
                     </div>
                   </div>
@@ -222,7 +225,7 @@ export default async function DashboardPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h2 className="text-xl font-semibold text-slate-800 mb-4">Ações Rápidas</h2>
         <div className="grid gap-4 md:grid-cols-3">
-          <Link 
+          <Link
             href="/candidatos"
             className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group"
           >
@@ -230,8 +233,8 @@ export default async function DashboardPage() {
             <h3 className="font-semibold text-slate-800">Gerenciar Candidatos</h3>
             <p className="text-sm text-slate-600 mt-1">Visualizar e editar candidatos</p>
           </Link>
-          
-          <Link 
+
+          <Link
             href="/vagas"
             className="p-4 border border-gray-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-all duration-200 group"
           >
@@ -239,8 +242,8 @@ export default async function DashboardPage() {
             <h3 className="font-semibold text-slate-800">Vagas Abertas</h3>
             <p className="text-sm text-slate-600 mt-1">Gerenciar posições disponíveis</p>
           </Link>
-          
-          <Link 
+
+          <Link
             href="/relatorios"
             className="p-4 border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-all duration-200 group"
           >

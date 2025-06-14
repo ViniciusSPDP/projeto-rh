@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { Prisma } from '@prisma/client'; // 1. Importando o namespace Prisma
 
 // Rota para criar um candidato manualmente (via admin)
 export async function POST(req: NextRequest) {
@@ -10,7 +11,7 @@ export async function POST(req: NextRequest) {
 
     // Remove campos vazios para não salvar strings vazias no banco,
     // permitindo que o Prisma use os valores padrão ou nulos do schema.
-    const cleanBody: { [key: string]: any } = {};
+    const cleanBody: { [key: string]: unknown } = {}; // 2. Trocado 'any' por 'unknown'
     for (const key in body) {
       if (body[key] !== '' && body[key] !== null && body[key] !== undefined) {
         cleanBody[key] = body[key];
@@ -18,7 +19,8 @@ export async function POST(req: NextRequest) {
     }
 
     const novoCandidato = await prisma.candidatos.create({
-      data: cleanBody,
+      // 3. Adicionando uma asserção de tipo para o Prisma
+      data: cleanBody as Prisma.CandidatosCreateInput,
     });
 
     return NextResponse.json(novoCandidato, { status: 201 });

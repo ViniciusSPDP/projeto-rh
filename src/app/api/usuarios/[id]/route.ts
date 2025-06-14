@@ -1,49 +1,52 @@
-// src/app/api/usuarios/[id]/route.ts
-
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
-// Função para atualizar um usuário (status ou senha)
+// Definindo uma interface para o contexto da rota
+interface Context {
+  params: {
+    id: string
+  }
+}
+
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: Context // 👈 CORREÇÃO 1: Tipagem do context
 ) {
+  const { params } = context
+  const userId = Number(params.id);
+  const body = await req.json();
+  const { autorizado, senha } = body;
+
+  if (isNaN(userId)) {
+    return NextResponse.json({ error: 'ID de usuário inválido' }, { status: 400 });
+  }
+
+  const updateData: { autorizado?: boolean; senhahash?: string } = {};
+
+  if (typeof autorizado === 'boolean') {
+    updateData.autorizado = autorizado;
+  }
+
+  if (senha && typeof senha === 'string') {
+    if (senha.length < 6) {
+      return NextResponse.json({ error: 'A nova senha deve ter pelo menos 6 caracteres.' }, { status: 400 });
+    }
+    updateData.senhahash = await bcrypt.hash(senha, 10);
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    return NextResponse.json({ error: 'Nenhum dado para atualizar fornecido.' }, { status: 400 });
+  }
+
   try {
-    const userId = Number(params.id);
-    const body = await req.json();
-    const { autorizado, senha } = body;
-
-    if (isNaN(userId)) {
-      return NextResponse.json({ error: 'ID de usuário inválido' }, { status: 400 });
-    }
-
-    const updateData: { autorizado?: boolean; senhahash?: string } = {};
-
-    // Verifica se a propriedade 'autorizado' foi enviada e é um booleano
-    if (typeof autorizado === 'boolean') {
-      updateData.autorizado = autorizado;
-    }
-
-    // Verifica se a 'senha' foi enviada, criptografa e adiciona aos dados de atualização
-    if (senha && typeof senha === 'string') {
-      if (senha.length < 6) {
-        return NextResponse.json({ error: 'A nova senha deve ter pelo menos 6 caracteres.' }, { status: 400 });
-      }
-      updateData.senhahash = await bcrypt.hash(senha, 10);
-    }
-
-    if (Object.keys(updateData).length === 0) {
-      return NextResponse.json({ error: 'Nenhum dado para atualizar fornecido.' }, { status: 400 });
-    }
-
-    // Executa a atualização no banco de dados
     const updatedUser = await prisma.usuario.update({
       where: { id: userId },
       data: updateData,
     });
 
-    // Remove a senha do objeto de retorno por segurança
+    // 👇 CORREÇÃO 2: Adicionado comentário para desabilitar a regra do ESLint nesta linha
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { senhahash: _, ...userWithoutPassword } = updatedUser;
     return NextResponse.json(userWithoutPassword);
 

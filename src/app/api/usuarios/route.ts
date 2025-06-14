@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
     })
 
     // Remove a senha do objeto de retorno por segurança
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { senhahash: _, ...usuarioSemSenha } = novoUsuario
 
     return NextResponse.json(usuarioSemSenha, { status: 201 }) // 201 Created

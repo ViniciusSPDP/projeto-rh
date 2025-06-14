@@ -1,35 +1,37 @@
 import prisma from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import BotaoPrint from '@/app/components/BotaoPrint'
+import Image from 'next/image' // 1. Importar o componente Image
 import {
-    User, Briefcase, MapPin, Calendar, Phone, Mail, Award,
-    GraduationCap, Languages, Globe, Terminal, Check, Car
+    Briefcase, MapPin, Phone, Mail, Award,
+    GraduationCap, Globe, Terminal, Check, Car
 } from 'lucide-react'
+import { Candidatos } from '@prisma/client'
 
-export default async function ImprimirCurriculoPage({
-    params,
-}: {
-    params: { id: string }
-}) {
+interface ImprimirCurriculoPageProps {
+    params: {
+        id: string;
+    }
+}
+
+export default async function ImprimirCurriculoPage({ params }: ImprimirCurriculoPageProps) {
     const id = Number(params.id)
 
     if (isNaN(id)) return notFound()
 
-    const candidato = await prisma.candidatos.findUnique({
+    const candidato: Candidatos | null = await prisma.candidatos.findUnique({
         where: { idCandidato: id },
     })
 
     if (!candidato) return notFound()
 
-    // Função para formatar data
-    function formatarData(data) {
+    function formatarData(data: string | Date | null) {
         if (!data) return '—'
-        return new Date(data).toLocaleDateString('pt-BR')
+        return new Date(data).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) // Adicionado timeZone para consistência
     }
 
-    // Função para calcular a idade
-    function calcularIdade(dataNascimento) {
-        if (!dataNascimento) return '—'
+    function calcularIdade(dataNascimento: string | Date | null) {
+        if (!dataNascimento) return null
         const hoje = new Date()
         const nascimento = new Date(dataNascimento)
         let idade = hoje.getFullYear() - nascimento.getFullYear()
@@ -40,26 +42,24 @@ export default async function ImprimirCurriculoPage({
         return idade
     }
 
+    const idade = calcularIdade(candidato.datanascimentoCandidato)
+
     return (
         <main className="bg-white min-h-screen p-8 print:p-4 max-w-[210mm] mx-auto">
-            {/* Cabeçalho invisível para visualização web que não será impresso */}
             <div className="print:hidden mb-6 flex justify-between items-center">
                 <h1 className="text-2xl font-bold text-blue-800">Visualização de Impressão</h1>
                 <BotaoPrint />
             </div>
 
-            {/* Conteúdo que será impresso */}
             <div className="print:block">
-                {/* Cabeçalho com logo e dados pessoais */}
                 <header className="flex justify-between items-start mb-6 border-b border-gray-300 pb-4">
-                    {/* Nome e informações de contato */}
                     <div className="flex-1">
                         <h1 className="text-2xl font-bold text-blue-800">{candidato.nomeCandidato || '—'}</h1>
 
                         <div className="mt-2 text-sm space-y-1">
-                            {candidato.sexoCandidato && (
+                            {candidato.sexoCandidato && idade !== null && (
                                 <p className="text-gray-700">
-                                    {candidato.sexoCandidato}, {calcularIdade(candidato.datanascimentoCandidato)} anos
+                                    {candidato.sexoCandidato}, {idade} anos
                                 </p>
                             )}
 
@@ -116,13 +116,14 @@ export default async function ImprimirCurriculoPage({
                         )}
                     </div>
 
-                    {/* Foto + logo */}
                     <div className="flex flex-col items-center gap-2 ml-4">
-                        <div className="w-35 h-35 flex items-center justify-center">
-                            <img
+                        <div className="w-36 h-36 relative"> 
+                            {/* 2. Substituído <img> por <Image> */}
+                            <Image
                                 src="/Logo.png"
                                 alt="Logo Conexão Distribuidora"
-                                className="max-h-full max-w-full object-contain"
+                                layout="fill"
+                                objectFit="contain"
                             />
                         </div>
                     </div>
@@ -130,9 +131,7 @@ export default async function ImprimirCurriculoPage({
 
 
                 <div className="grid grid-cols-3 gap-6">
-                    {/* Coluna esquerda - Informações */}
                     <div className="col-span-1 space-y-4">
-                        {/* Formação */}
                         <section>
                             <h2 className="font-bold text-blue-800 flex items-center border-b border-gray-200 pb-1 mb-2">
                                 <GraduationCap className="w-4 h-4 mr-1 text-blue-600" />
@@ -143,7 +142,6 @@ export default async function ImprimirCurriculoPage({
                             </div>
                         </section>
 
-                        {/* Conhecimentos */}
                         <section>
                             <h2 className="font-bold text-blue-800 flex items-center border-b border-gray-200 pb-1 mb-2">
                                 <Terminal className="w-4 h-4 mr-1 text-blue-600" />
@@ -192,7 +190,6 @@ export default async function ImprimirCurriculoPage({
                             </div>
                         </section>
 
-                        {/* PCD */}
                         {candidato.cidareacandidato && candidato.cidareacandidato.trim() !== '' && (
                             <section>
                                 <h2 className="font-bold text-blue-800 flex items-center border-b border-gray-200 pb-1 mb-2">
@@ -205,7 +202,6 @@ export default async function ImprimirCurriculoPage({
                             </section>
                         )}
 
-                        {/* Áreas de Interesse */}
                         {candidato.vagainteresseCandidato && (
                             <section>
                                 <h2 className="font-bold text-blue-800 flex items-center border-b border-gray-200 pb-1 mb-2">
@@ -218,7 +214,6 @@ export default async function ImprimirCurriculoPage({
                             </section>
                         )}
 
-                        {/* Diferenciais */}
                         {candidato.conhecimentosCandidato && (
                             <section>
                                 <h2 className="font-bold text-blue-800 flex items-center border-b border-gray-200 pb-1 mb-2">
@@ -232,7 +227,6 @@ export default async function ImprimirCurriculoPage({
                         )}
                     </div>
 
-                    {/* Coluna direita - Experiência profissional */}
                     <div className="col-span-2">
                         <h2 className="font-bold text-blue-800 flex items-center border-b border-gray-200 pb-1 mb-4">
                             <Briefcase className="w-4 h-4 mr-1 text-blue-600" />
@@ -240,7 +234,6 @@ export default async function ImprimirCurriculoPage({
                         </h2>
 
                         <div className="space-y-4 text-sm">
-                            {/* Primeira Experiência */}
                             {candidato.empresaCandidato && (
                                 <div className="border-l-2 border-blue-500 pl-3 pb-3">
                                     <div className="flex justify-between">
@@ -255,7 +248,6 @@ export default async function ImprimirCurriculoPage({
                                 </div>
                             )}
 
-                            {/* Segunda Experiência */}
                             {candidato.empresa2Candidato && (
                                 <div className="border-l-2 border-blue-400 pl-3 pb-3">
                                     <div className="flex justify-between">
@@ -270,7 +262,6 @@ export default async function ImprimirCurriculoPage({
                                 </div>
                             )}
 
-                            {/* Terceira Experiência */}
                             {candidato.empresa3Candidato && (
                                 <div className="border-l-2 border-blue-300 pl-3 pb-3">
                                     <div className="flex justify-between">
@@ -292,7 +283,6 @@ export default async function ImprimirCurriculoPage({
                     </div>
                 </div>
 
-                {/* Rodapé */}
                 <footer className="mt-8 pt-2 border-t border-gray-300 text-center text-xs text-gray-500">
                     Currículo gerado em {new Date().toLocaleDateString('pt-BR')}
                 </footer>

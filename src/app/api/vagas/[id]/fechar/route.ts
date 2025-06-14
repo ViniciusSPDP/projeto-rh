@@ -1,14 +1,18 @@
-// src/app/api/vagas/[id]/fechar/route.ts
-
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 
-// Usamos o método PATCH para atualizações parciais
+// Definindo a interface para o contexto da rota
+interface Context {
+  params: {
+    id: string;
+  }
+}
+
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: Context // Corrigido o tipo 'any'
 ) {
-  const vagaId = Number(params.id)
+  const vagaId = Number(context.params.id)
 
   if (isNaN(vagaId)) {
     return NextResponse.json({ error: 'ID da vaga inválido' }, { status: 400 })
@@ -23,7 +27,6 @@ export async function PATCH(
       return NextResponse.json({ error: 'Vaga não encontrada' }, { status: 404 })
     }
 
-    // Atualiza o status da vaga para "Encerrada"
     const vagaAtualizada = await prisma.vaga.update({
       where: { idVaga: vagaId },
       data: { status: 'Encerrada' },

@@ -1,27 +1,31 @@
-
 import prisma from '@/lib/prisma'
-import { Candidatos } from '@/generated/prisma'
+import { Prisma, Candidatos } from '@prisma/client' // Importando o tipo Candidatos diretamente
 import Link from 'next/link'
+import Image from 'next/image' // 1. Importar o componente Image
 import { ChevronLeft, ChevronRight, User, Search, Filter, CircleCheck, CircleX, Loader, Cog } from 'lucide-react'
 
-export const dynamic = 'force-dynamic' // Garante SSR atualizado a cada acesso
+export const dynamic = 'force-dynamic'
 
-export default async function CandidatosPage({
-  searchParams,
-}: {
-  searchParams?: { page?: string; search?: string; vaga?: string; situacao?: string }
-}) {
+interface CandidatosPageProps {
+  searchParams?: {
+    page?: string;
+    search?: string;
+    vaga?: string;
+    situacao?: string;
+  }
+}
+
+export default async function CandidatosPage({ searchParams }: CandidatosPageProps) {
   const page = parseInt(searchParams?.page || '1')
   const limit = 10
   const offset = (page - 1) * limit
   const { search, vaga, situacao } = searchParams || {}
 
-  // Adiciona filtro por nome ou email se tiver pesquisa
-  const filter = {
+  const filter: Prisma.CandidatosWhereInput = {
     ...(search && {
       OR: [
-        { nomeCandidato: { contains: search, mode: 'insensitive' } },
-        { emailCandidato: { contains: search, mode: 'insensitive' } },
+        { nomeCandidato: { contains: search, mode: Prisma.QueryMode.insensitive } },
+        { emailCandidato: { contains: search, mode: Prisma.QueryMode.insensitive } },
       ]
     }),
     ...(vaga && { vagainteresseCandidato: { equals: vaga } }),
@@ -40,7 +44,6 @@ export default async function CandidatosPage({
 
   const totalPages = Math.ceil(total / limit)
 
-  // Função para gerar link de paginação mantendo os filtros
   const getPaginationLink = (pageNum: number) => {
     const params = new URLSearchParams()
     params.set('page', pageNum.toString())
@@ -50,20 +53,12 @@ export default async function CandidatosPage({
     return `/candidatos?${params.toString()}`
   }
 
-  // Gerar range de páginas para mostrar na paginação
   const getPaginationRange = () => {
-    const delta = 2; // Número de páginas para mostrar antes e depois da página atual
+    const delta = 2;
     const range: (number | string)[] = []
-
-    for (
-      let i = Math.max(1, page - delta);
-      i <= Math.min(totalPages, page + delta);
-      i++
-    ) {
+    for (let i = Math.max(1, page - delta); i <= Math.min(totalPages, page + delta); i++) {
       range.push(i)
     }
-
-    // Adicionar primeira página e separador se necessário
     if (range.length > 0) {
       const firstItem = range[0] as number
       if (firstItem > 1) {
@@ -73,8 +68,6 @@ export default async function CandidatosPage({
         }
       }
     }
-
-    // Adicionar última página e separador se necessário
     if (range.length > 0) {
       const lastItem = range[range.length - 1] as number
       if (lastItem < totalPages) {
@@ -84,27 +77,18 @@ export default async function CandidatosPage({
         range.push(totalPages)
       }
     }
-
     return range
   }
 
-  // Status de cores para situação do candidato
   const getSituacaoStyle = (situacao: string | null | undefined) => {
     if (!situacao) return 'bg-gray-100 text-gray-800'
-
     switch (situacao.toLowerCase()) {
-      case 'aprovado':
-        return 'bg-blue-100 text-blue-800'
-      case 'em análise':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'contratado':
-        return 'bg-green-100 text-green-800'
-      case 'reprovado':
-        return 'bg-red-100 text-red-800'
-      case 'em processo':
-        return 'bg-purple-100 text-purple-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
+      case 'aprovado': return 'bg-blue-100 text-blue-800'
+      case 'em análise': return 'bg-yellow-100 text-yellow-800'
+      case 'contratado': return 'bg-green-100 text-green-800'
+      case 'reprovado': return 'bg-red-100 text-red-800'
+      case 'em processo': return 'bg-purple-100 text-purple-800'
+      default: return 'bg-gray-100 text-gray-800'
     }
   }
 
@@ -129,14 +113,13 @@ export default async function CandidatosPage({
     { value: "Reprovado", label: "Reprovado" },
     { value: "Contratado", label: "Contratado" },
     { value: "Em análise", label: "Em análise" },
-    { value: "Em processo", label: "Em processo" }, // Nova opção
+    { value: "Em processo", label: "Em processo" },
   ]
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white shadow-lg rounded-xl overflow-hidden border border-blue-100">
-          {/* Cabeçalho */}
           <div className="bg-gradient-to-r from-blue-800 to-blue-600 p-6 md:p-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-center">
@@ -153,23 +136,15 @@ export default async function CandidatosPage({
             </div>
           </div>
 
-          {/* Seção de filtros melhorada */}
           <div className="bg-blue-50/50 border-b border-blue-100 p-6">
-            <form
-              action="/candidatos"
-              method="GET"
-              className="space-y-4"
-            >
+            <form action="/candidatos" method="GET" className="space-y-4">
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="relative flex-1">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Search className="h-5 w-5 text-blue-400" />
                   </div>
                   <input
-                    type="text"
-                    name="search"
-                    defaultValue={search}
-                    placeholder="Buscar por nome ou email..."
+                    type="text" name="search" defaultValue={search} placeholder="Buscar por nome ou email..."
                     className="block w-full pl-10 pr-3 py-3 border border-blue-200 rounded-lg leading-5 bg-white placeholder-blue-400 text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all"
                     aria-label="Buscar candidatos"
                   />
@@ -177,52 +152,30 @@ export default async function CandidatosPage({
 
                 <div className="flex flex-col sm:flex-row gap-4 md:w-auto w-full">
                   <div className="relative">
-                    <select
-                      name="vaga"
-                      defaultValue={searchParams?.vaga || ''}
-                      className="appearance-none pl-3 pr-10 py-3 border border-blue-200 rounded-lg bg-white text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-48 shadow-sm transition-all"
-                    >
+                    <select name="vaga" defaultValue={searchParams?.vaga || ''} className="appearance-none pl-3 pr-10 py-3 border border-blue-200 rounded-lg bg-white text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-48 shadow-sm transition-all">
                       <option value="">Todas as Vagas</option>
-                      {vagasOptions.map(option => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
+                      {vagasOptions.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
                     </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                      <Filter className="h-4 w-4 text-blue-500" />
-                    </div>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none"><Filter className="h-4 w-4 text-blue-500" /></div>
                   </div>
 
                   <div className="relative">
-                    <select
-                      name="situacao"
-                      defaultValue={searchParams?.situacao || ''}
-                      className="appearance-none pl-3 pr-10 py-3 border border-blue-200 rounded-lg bg-white text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-48 shadow-sm transition-all"
-                    >
+                    <select name="situacao" defaultValue={searchParams?.situacao || ''} className="appearance-none pl-3 pr-10 py-3 border border-blue-200 rounded-lg bg-white text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-48 shadow-sm transition-all">
                       <option value="">Todas as Situações</option>
-                      {situacaoOptions.map(option => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
+                      {situacaoOptions.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
                     </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                      <Filter className="h-4 w-4 text-blue-500" />
-                    </div>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none"><Filter className="h-4 w-4 text-blue-500" /></div>
                   </div>
 
-                  <button
-                    type="submit"
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition shadow-sm font-medium flex items-center justify-center"
-                  >
-                    <Search className="w-4 h-4 mr-2" />
-                    Filtrar
+                  <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition shadow-sm font-medium flex items-center justify-center">
+                    <Search className="w-4 h-4 mr-2" /> Filtrar
                   </button>
                 </div>
               </div>
-
               <input type="hidden" name="page" value="1" />
             </form>
           </div>
 
-          {/* Tabela de candidatos */}
           <div className="overflow-x-auto">
             <table className="w-full table-auto">
               <thead>
@@ -237,34 +190,31 @@ export default async function CandidatosPage({
               <tbody className="divide-y divide-blue-100">
                 {candidatos.length > 0 ? (
                   candidatos.map((candidato: Candidatos) => (
-                    <tr
-                      key={candidato.idCandidato}
-                      className="hover:bg-blue-50/50 transition-colors group"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-900">
-                        {candidato.idCandidato}
-                      </td>
+                    <tr key={candidato.idCandidato} className="hover:bg-blue-50/50 transition-colors group">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-900">{candidato.idCandidato}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-900 flex items-center gap-3">
-                        {candidato.fotoCandidato ? (
-                          <img
-                            src={candidato.fotoCandidato}
-                            alt="Foto"
-                            className="w-10 h-10 rounded-full object-cover border border-blue-200 shadow-sm"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shadow-sm">
-                            <User className="w-5 h-5 text-blue-500" />
-                          </div>
-                        )}
+                        <div className="relative w-10 h-10 rounded-full overflow-hidden border border-blue-200 shadow-sm">
+                          {candidato.fotoCandidato ? (
+                            // 2. Substituído <img> por <Image>
+                            <Image
+                              src={candidato.fotoCandidato}
+                              alt={`Foto de ${candidato.nomeCandidato}`}
+                              layout="fill"
+                              objectFit="cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-blue-100 flex items-center justify-center">
+                              <User className="w-5 h-5 text-blue-500" />
+                            </div>
+                          )}
+                        </div>
                         <div>
                           <div className="font-medium">{candidato.nomeCandidato}</div>
                           <div className="text-xs text-gray-500 hidden sm:block">{candidato.emailCandidato}</div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-700 hidden md:table-cell">
-                        <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-md text-xs font-medium">
-                          {candidato.vagainteresseCandidato}
-                        </span>
+                        <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-md text-xs font-medium">{candidato.vagainteresseCandidato}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${getSituacaoStyle(candidato.situacaoCandidato)}`}>
@@ -272,17 +222,12 @@ export default async function CandidatosPage({
                           {candidato.situacaoCandidato === 'Reprovado' && <CircleX className="w-4 h-4" />}
                           {candidato.situacaoCandidato === 'Em análise' && <Loader className="w-4 h-4 animate-spin" />}
                           {candidato.situacaoCandidato === 'Em processo' && <Cog className="w-4 h-4 animate-spin" />}
-
                           {candidato.situacaoCandidato}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <Link
-                          href={`/candidatos/${candidato.idCandidato}`}
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors group-hover:bg-blue-100"
-                        >
-                          <Search className="w-4 h-4" />
-                          <span>Detalhes</span>
+                        <Link href={`/candidatos/${candidato.idCandidato}`} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors group-hover:bg-blue-100">
+                          <Search className="w-4 h-4" /> <span>Detalhes</span>
                         </Link>
                       </td>
                     </tr>
@@ -302,33 +247,17 @@ export default async function CandidatosPage({
             </table>
           </div>
 
-          {/* Paginação melhorada */}
           {totalPages > 1 && (
             <div className="px-6 py-5 bg-gradient-to-b from-white to-blue-50 border-t border-blue-100">
               <div className="flex items-center justify-between">
                 <div className="flex-1 flex justify-between sm:hidden">
-                  <Link
-                    href={page > 1 ? getPaginationLink(page - 1) : '#'}
-                    className={`relative inline-flex items-center px-4 py-2 border border-blue-300 text-sm font-medium rounded-md ${page > 1
-                      ? 'bg-white text-blue-700 hover:bg-blue-50'
-                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      }`}
-                    aria-disabled={page <= 1}
-                  >
+                  <Link href={page > 1 ? getPaginationLink(page - 1) : '#'} className={`relative inline-flex items-center px-4 py-2 border border-blue-300 text-sm font-medium rounded-md ${page > 1 ? 'bg-white text-blue-700 hover:bg-blue-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`} aria-disabled={page <= 1}>
                     Anterior
                   </Link>
-                  <Link
-                    href={page < totalPages ? getPaginationLink(page + 1) : '#'}
-                    className={`ml-3 relative inline-flex items-center px-4 py-2 border border-blue-300 text-sm font-medium rounded-md ${page < totalPages
-                      ? 'bg-white text-blue-700 hover:bg-blue-50'
-                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      }`}
-                    aria-disabled={page >= totalPages}
-                  >
+                  <Link href={page < totalPages ? getPaginationLink(page + 1) : '#'} className={`ml-3 relative inline-flex items-center px-4 py-2 border border-blue-300 text-sm font-medium rounded-md ${page < totalPages ? 'bg-white text-blue-700 hover:bg-blue-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`} aria-disabled={page >= totalPages}>
                     Próxima
                   </Link>
                 </div>
-
                 <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm text-blue-700">
@@ -337,56 +266,21 @@ export default async function CandidatosPage({
                       <span className="font-medium">{total}</span> resultados
                     </p>
                   </div>
-
                   <nav className="relative z-0 inline-flex shadow-sm -space-x-px" aria-label="Paginação">
-                    {/* Botão "Anterior" */}
-                    <Link
-                      href={page > 1 ? getPaginationLink(page - 1) : '#'}
-                      className={`relative inline-flex items-center px-3 py-2 rounded-l-lg border border-blue-200 bg-white text-sm font-medium ${page > 1
-                        ? 'text-blue-600 hover:bg-blue-50'
-                        : 'text-gray-300 cursor-not-allowed'
-                        }`}
-                      aria-disabled={page <= 1}
-                    >
-                      <span className="sr-only">Anterior</span>
-                      <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                    <Link href={page > 1 ? getPaginationLink(page - 1) : '#'} className={`relative inline-flex items-center px-3 py-2 rounded-l-lg border border-blue-200 bg-white text-sm font-medium ${page > 1 ? 'text-blue-600 hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'}`} aria-disabled={page <= 1}>
+                      <span className="sr-only">Anterior</span><ChevronLeft className="h-5 w-5" aria-hidden="true" />
                     </Link>
-
-                    {/* Números das páginas */}
                     {getPaginationRange().map((item, i) =>
                       item === 'ellipsis' ? (
-                        <span
-                          key={`ellipsis-${i}`}
-                          className="relative inline-flex items-center px-4 py-2 border border-blue-200 bg-white text-sm font-medium text-gray-700"
-                        >
-                          ...
-                        </span>
+                        <span key={`ellipsis-${i}`} className="relative inline-flex items-center px-4 py-2 border border-blue-200 bg-white text-sm font-medium text-gray-700">...</span>
                       ) : (
-                        <Link
-                          key={`page-${item}`}
-                          href={getPaginationLink(item as number)}
-                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${page === item
-                            ? 'z-10 bg-blue-600 border-blue-600 text-white'
-                            : 'bg-white border-blue-200 text-blue-600 hover:bg-blue-50'
-                            }`}
-                          aria-current={page === item ? 'page' : undefined}
-                        >
+                        <Link key={`page-${item}`} href={getPaginationLink(item as number)} className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${page === item ? 'z-10 bg-blue-600 border-blue-600 text-white' : 'bg-white border-blue-200 text-blue-600 hover:bg-blue-50'}`} aria-current={page === item ? 'page' : undefined}>
                           {item}
                         </Link>
                       )
                     )}
-
-                    {/* Botão "Próxima" */}
-                    <Link
-                      href={page < totalPages ? getPaginationLink(page + 1) : '#'}
-                      className={`relative inline-flex items-center px-3 py-2 rounded-r-lg border border-blue-200 bg-white text-sm font-medium ${page < totalPages
-                        ? 'text-blue-600 hover:bg-blue-50'
-                        : 'text-gray-300 cursor-not-allowed'
-                        }`}
-                      aria-disabled={page >= totalPages}
-                    >
-                      <span className="sr-only">Próxima</span>
-                      <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                    <Link href={page < totalPages ? getPaginationLink(page + 1) : '#'} className={`relative inline-flex items-center px-3 py-2 rounded-r-lg border border-blue-200 bg-white text-sm font-medium ${page < totalPages ? 'text-blue-600 hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'}`} aria-disabled={page >= totalPages}>
+                      <span className="sr-only">Próxima</span><ChevronRight className="h-5 w-5" aria-hidden="true" />
                     </Link>
                   </nav>
                 </div>

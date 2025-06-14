@@ -17,6 +17,8 @@ interface Props {
   vagaId: number
   vagaCandidatoId: number
   etapaAtual: string
+    disabled?: boolean // <-- ADICIONADO AQUI
+
 }
 
 // Estrutura de dados para as etapas, com ícones e cores associadas

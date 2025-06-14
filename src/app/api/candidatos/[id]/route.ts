@@ -1,40 +1,45 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 
-export async function PATCH(request: NextRequest, context: any) {
-  const id = Number(context.params.id)
-  const data = await request.json()
-
-  const parsedData = {
-    ...data,
-    datanascimentoCandidato: data.datanascimentoCandidato ? new Date(data.datanascimentoCandidato) : null,
-    datainicioCandidato: data.datainicioCandidato ? new Date(data.datainicioCandidato) : null,
-    datafinalCandidato: data.datafinalCandidato ? new Date(data.datafinalCandidato) : null,
-    datainicio2Candidato: data.datainicio2Candidato ? new Date(data.datainicio2Candidato) : null,
-    datafinal2Candidato: data.datafinal2Candidato ? new Date(data.datafinal2Candidato) : null,
-    datainicio3Candidato: data.datainicio3Candidato ? new Date(data.datainicio3Candidato) : null,
-    datafinal3Candidato: data.datafinal3Candidato ? new Date(data.datafinal3Candidato) : null,
-  }
-
+// Corrigido a tipagem do 'context'
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const id = Number(params.id)
+  
   if (isNaN(id)) {
-    return new Response('ID inválido', { status: 400 })
+    return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
   }
 
   try {
+    const data = await request.json()
+
+    // Converte as datas de string para o formato Date, se existirem
+    const parsedData = {
+      ...data,
+      datanascimentoCandidato: data.datanascimentoCandidato ? new Date(data.datanascimentoCandidato) : null,
+      datainicioCandidato: data.datainicioCandidato ? new Date(data.datainicioCandidato) : null,
+      datafinalCandidato: data.datafinalCandidato ? new Date(data.datafinalCandidato) : null,
+      datainicio2Candidato: data.datainicio2Candidato ? new Date(data.datainicio2Candidato) : null,
+      datafinal2Candidato: data.datafinal2Candidato ? new Date(data.datafinal2Candidato) : null,
+      datainicio3Candidato: data.datainicio3Candidato ? new Date(data.datainicio3Candidato) : null,
+      datafinal3Candidato: data.datafinal3Candidato ? new Date(data.datafinal3Candidato) : null,
+    }
+
     const candidato = await prisma.candidatos.update({
       where: { idCandidato: id },
       data: parsedData,
     })
 
-    return new Response(
-      JSON.stringify({
-        ...candidato,
-        idCandidato: candidato.idCandidato.toString(),
-      }),
-      { status: 200 }
-    )
+    // Retorna o candidato atualizado
+    return NextResponse.json(candidato, { status: 200 })
+
   } catch (error) {
     console.error('Erro ao atualizar candidato:', error)
-    return new Response('Erro ao atualizar candidato', { status: 500 })
+    return NextResponse.json(
+      { error: 'Erro interno ao atualizar candidato' },
+      { status: 500 }
+    )
   }
 }

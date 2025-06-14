@@ -69,16 +69,71 @@ export default function FormCandidatoPublico({ vagaId }: { vagaId?: number }) {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [visibleExperiences, setVisibleExperiences] = useState(0);
 
-  const [formData, setFormData] = useState({
-    nomeCandidato: '', cpfCandidato: '', rgCandidato: '', sexoCandidato: '', outrosexoCandidato: '', estadocivilCandidato: '', datanascimentoCandidato: '', emailCandidato: '', telefoneCandidato: '', telefone2Candidato: '', cnhCandidato: '', categoriacnhCandidato: '', pcdCandidato: '', cidareacandidato: '', linkedinCandidato: '', facebookCandidato: '', instagramCandidato: '', cepCandidato: '', ruaCandidato: '', numeroCandidato: '', bairroCandidato: '', cidadeCandidato: '', estadoCandidato: '', vagainteresseCandidato: '', escolaridadeCandidato: '', conhecimentosCandidato: '', 
-    wordCandidato: 'Desconheço', 
-    excelCandidato: 'Desconheço', 
-    powerpointCandidato: 'Desconheço', 
-    conhecimentosinformaticaCandidato: [] as string[], conhecimentoinfcandidato: '', possuiexperienciaCandidato: '', empresaCandidato: '', local1Candidato: '', atividadesdesenvolvidas1Candidato: '', datainicioCandidato: '', trabalha1Candidato: '', datafinalCandidato: '', empresa2Candidato: '', local2Candidato: '', atividadesdesenvolvidas2Candidato: '', datainicio2Candidato: '', trabalha2Candidato: '', datafinal2Candidato: '', empresa3Candidato: '', local3Candidato: '', atividadesdesenvolvidas3Candidato: '', datainicio3Candidato: '', trabalha3Candidato: '', datafinal3Candidato: '', fotoCandidato: '', parentescoCandidato: '', graudeparentescoenomeCandidato: '',
-      // --- ALTERAÇÃO 1: Definindo um valor padrão para os campos de parentesco ---
-    parentescoCandidato: 'Não', 
+// Substitua o bloco `useState` do formData por este:
+const [formData, setFormData] = useState({
+    // Dados Pessoais e Documentos
+    nomeCandidato: '',
+    cpfCandidato: '',
+    rgCandidato: '',
+    sexoCandidato: '',
+    outrosexoCandidato: '',
+    estadocivilCandidato: '',
+    datanascimentoCandidato: '',
+    emailCandidato: '',
+    telefoneCandidato: '',
+    telefone2Candidato: '',
+    cnhCandidato: '',
+    categoriacnhCandidato: '',
+    pcdCandidato: '',
+    cidareacandidato: '',
+    linkedinCandidato: '',
+    facebookCandidato: '',
+    instagramCandidato: '',
+    fotoCandidato: '',
+
+    // Endereço
+    cepCandidato: '',
+    ruaCandidato: '',
+    numeroCandidato: '',
+    bairroCandidato: '',
+    cidadeCandidato: '',
+    estadoCandidato: '',
+
+    // Formação e Habilidades
+    vagainteresseCandidato: '',
+    escolaridadeCandidato: '',
+    conhecimentosCandidato: '',
+    wordCandidato: 'Desconheço',
+    excelCandidato: 'Desconheço',
+    powerpointCandidato: 'Desconheço',
+    conhecimentosinformaticaCandidato: [] as string[],
+    conhecimentoinfcandidato: '',
+
+    // Experiência
+    possuiexperienciaCandidato: '',
+    empresaCandidato: '',
+    local1Candidato: '',
+    atividadesdesenvolvidas1Candidato: '',
+    datainicioCandidato: '',
+    trabalha1Candidato: '',
+    datafinalCandidato: '',
+    empresa2Candidato: '',
+    local2Candidato: '',
+    atividadesdesenvolvidas2Candidato: '',
+    datainicio2Candidato: '',
+    trabalha2Candidato: '',
+    datafinal2Candidato: '',
+    empresa3Candidato: '',
+    local3Candidato: '',
+    atividadesdesenvolvidas3Candidato: '',
+    datainicio3Candidato: '',
+    trabalha3Candidato: '',
+    datafinal3Candidato: '',
+
+    // Parentesco (aqui definimos os valores iniciais)
+    parentescoCandidato: 'Não', // O valor inicial 'Não' é definido aqui
     graudeparentescoenomeCandidato: '',
-  });
+});
 
   const handleTabNavigation = (direction: 'next' | 'prev') => {
     const currentIndex = TABS_CONFIG.findIndex(t => t.id === activeTab);

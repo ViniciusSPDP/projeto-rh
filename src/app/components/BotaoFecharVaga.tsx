@@ -27,7 +27,7 @@ export function BotaoFecharVaga({ vagaId }: { vagaId: number }) {
         toast.error(data?.error || 'Não foi possível encerrar a vaga.')
       }
     } catch (error) {
-      toast.error('Ocorreu um erro de comunicação com o servidor.')
+      toast.error('Ocorreu um erro de comunicação com o servidor.' + error)
     } finally {
       // O loading já é suficiente aqui, o modal será fechado no sucesso
       setLoading(false)

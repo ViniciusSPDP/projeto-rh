@@ -2,6 +2,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import prisma from '@/lib/prisma'
 import { hashPassword } from '@/lib/auth'
+import { Prisma } from '@prisma/client' // Importando tipos do Prisma
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).end()
@@ -27,10 +28,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     })
     return res.status(201).json({ id: usuario.id, email: usuario.email })
-  } catch (e: any) {
-    if (e.code === 'P2002') { // violação de unique constraint
+  } catch (e) { // Removido o 'any'
+    // Verificando se é um erro conhecido do Prisma com código de erro
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
       return res.status(409).json({ error: 'Email já cadastrado' })
     }
+    // Para todos os outros erros
     return res.status(500).json({ error: 'Erro interno' })
   }
 }
