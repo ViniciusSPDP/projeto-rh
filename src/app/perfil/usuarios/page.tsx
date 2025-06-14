@@ -5,6 +5,9 @@ import { UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import UserListClient from './UserListClient'; // Nosso componente interativo
 
+export const dynamic = 'force-dynamic'
+
+
 // Tipagem para os dados que passaremos para o componente cliente
 export type UserForList = {
   id: number;
