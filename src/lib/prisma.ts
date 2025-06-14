@@ -1,13 +1,22 @@
-// src/lib/prisma.ts
-
 import { PrismaClient } from '@prisma/client'
 
-// ADICIONE ESTA LINHA - ELA RESOLVE O PROBLEMA PARA TODO O PROJETO
-// Esta linha ensina ao JSON como converter BigInt para uma string.
-(BigInt.prototype as any).toJSON = function () {
-  return this.toString()
+// Declara um tipo para a nossa instância global do Prisma
+declare global {
+  // eslint-disable-next-line no-var
+  var prisma: PrismaClient | undefined
 }
 
-const prisma = new PrismaClient()
+// Cria a instância do Prisma, reutilizando a existente em desenvolvimento
+const prisma = global.prisma || new PrismaClient()
+
+if (process.env.NODE_ENV === 'development') {
+  global.prisma = prisma
+}
+
+// Essa linha ensina ao JSON como converter BigInt para uma string, evitando erros de serialização.
+// A tipagem 'unknown' é usada para ser mais segura que 'any'.
+(BigInt.prototype as unknown as { toJSON: () => string }).toJSON = function () {
+  return this.toString()
+}
 
 export default prisma

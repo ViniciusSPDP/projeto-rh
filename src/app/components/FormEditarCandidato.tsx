@@ -1,178 +1,180 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, ChangeEvent, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Save, User, Mail, Phone, Calendar, MapPin, Briefcase, CheckCircle, Circle, AlertCircle } from 'lucide-react'
+import { Loader2, Save, User, Mail, Phone, MapPin, Briefcase, CheckCircle, Circle } from 'lucide-react'
+import { Candidatos, Prisma } from '@prisma/client'
+import toast from 'react-hot-toast'
 
-export default function FormEditarCandidato({ candidato }: { candidato: any }) {
+// --- Tipos e Interfaces ---
+
+interface FormEditarCandidatoProps {
+    candidato: Candidatos;
+}
+
+// Tipo para o estado do formulário
+type FormDataType = Omit<Partial<Prisma.CandidatosUpdateInput>, 'conhecimentosinformaticaCandidato'> & {
+    conhecimentosinformaticaCandidato: string[];
+};
+
+// --- Funções Auxiliares ---
+
+function formatDate(dateString?: string | Date | null): string {
+    if (!dateString) return ''
+    const date = new Date(dateString);
+    // Ajusta para o fuso horário local para evitar problemas de um dia a menos
+    const offset = date.getTimezoneOffset() * 60000;
+    const adjustedDate = new Date(date.getTime() + offset);
+    return adjustedDate.toISOString().split('T')[0];
+}
+
+// --- Componente Principal ---
+
+export default function FormEditarCandidato({ candidato }: FormEditarCandidatoProps) {
     const router = useRouter()
     const [loading, setLoading] = useState(false)
     const [activeTab, setActiveTab] = useState('pessoal')
-    const [formData, setFormData] = useState({
-        // Dados pessoais
+
+    // Estado inicial do formulário com tipagem forte
+    const [formData, setFormData] = useState<FormDataType>({
         nomeCandidato: candidato.nomeCandidato || '',
         cpfCandidato: candidato.cpfCandidato || '',
         rgCandidato: candidato.rgCandidato || '',
         sexoCandidato: candidato.sexoCandidato || '',
         outrosexoCandidato: candidato.outrosexoCandidato || '',
         estadocivilCandidato: candidato.estadocivilCandidato || '',
-        datanascimentoCandidato: candidato.datanascimentoCandidato ? formatDate(candidato.datanascimentoCandidato) : '',
+        datanascimentoCandidato: formatDate(candidato.datanascimentoCandidato),
         emailCandidato: candidato.emailCandidato || '',
         telefoneCandidato: candidato.telefoneCandidato || '',
         telefone2Candidato: candidato.telefone2Candidato || '',
-
-        // Documentos
         cnhCandidato: candidato.cnhCandidato || '',
         categoriacnhCandidato: candidato.categoriacnhCandidato || '',
         pcdCandidato: candidato.pcdCandidato || '',
-
-        // Redes sociais
+        cidareacandidato: candidato.cidareacandidato || '',
         linkedinCandidato: candidato.linkedinCandidato || '',
         facebookCandidato: candidato.facebookCandidato || '',
         instagramCandidato: candidato.instagramCandidato || '',
-
-        // Endereço
         cepCandidato: candidato.cepCandidato || '',
         ruaCandidato: candidato.ruaCandidato || '',
         numeroCandidato: candidato.numeroCandidato || '',
         bairroCandidato: candidato.bairroCandidato || '',
         cidadeCandidato: candidato.cidadeCandidato || '',
         estadoCandidato: candidato.estadoCandidato || '',
-
-        // Interesses e formação
         vagainteresseCandidato: candidato.vagainteresseCandidato || '',
         escolaridadeCandidato: candidato.escolaridadeCandidato || '',
-        cidareacandidato: candidato.cidareacandidato || '',
-
-        // Conhecimentos
         conhecimentosCandidato: candidato.conhecimentosCandidato || '',
         wordCandidato: candidato.wordCandidato || '',
         excelCandidato: candidato.excelCandidato || '',
         powerpointCandidato: candidato.powerpointCandidato || '',
         conhecimentosinformaticaCandidato: typeof candidato.conhecimentosinformaticaCandidato === 'string'
-            ? candidato.conhecimentosinformaticaCandidato.split(',').map((v: string) => v.trim())
-            : Array.isArray(candidato.conhecimentosinformaticaCandidato)
-                ? candidato.conhecimentosinformaticaCandidato
-                : [],
-
+            ? candidato.conhecimentosinformaticaCandidato.split(',').map(v => v.trim()).filter(Boolean)
+            : [],
         conhecimentoinfcandidato: candidato.conhecimentoinfcandidato || '',
-
-        // Experiência 1
         possuiexperienciaCandidato: candidato.possuiexperienciaCandidato || '',
         empresaCandidato: candidato.empresaCandidato || '',
         local1Candidato: candidato.local1Candidato || '',
         atividadesdesenvolvidas1Candidato: candidato.atividadesdesenvolvidas1Candidato || '',
-        datainicioCandidato: candidato.datainicioCandidato ? formatDate(candidato.datainicioCandidato) : '',
+        datainicioCandidato: formatDate(candidato.datainicioCandidato),
         trabalha1Candidato: candidato.trabalha1Candidato || '',
-        datafinalCandidato: candidato.datafinalCandidato ? formatDate(candidato.datafinalCandidato) : '',
-
-        // Experiência 2
+        datafinalCandidato: formatDate(candidato.datafinalCandidato),
         empresa2Candidato: candidato.empresa2Candidato || '',
         local2Candidato: candidato.local2Candidato || '',
         atividadesdesenvolvidas2Candidato: candidato.atividadesdesenvolvidas2Candidato || '',
-        datainicio2Candidato: candidato.datainicio2Candidato ? formatDate(candidato.datainicio2Candidato) : '',
+        datainicio2Candidato: formatDate(candidato.datainicio2Candidato),
         trabalha2Candidato: candidato.trabalha2Candidato || '',
-        datafinal2Candidato: candidato.datafinal2Candidato ? formatDate(candidato.datafinal2Candidato) : '',
-
-        // Experiência 3
+        datafinal2Candidato: formatDate(candidato.datafinal2Candidato),
         empresa3Candidato: candidato.empresa3Candidato || '',
         local3Candidato: candidato.local3Candidato || '',
         atividadesdesenvolvidas3Candidato: candidato.atividadesdesenvolvidas3Candidato || '',
-        datainicio3Candidato: candidato.datainicio3Candidato ? formatDate(candidato.datainicio3Candidato) : '',
+        datainicio3Candidato: formatDate(candidato.datainicio3Candidato),
         trabalha3Candidato: candidato.trabalha3Candidato || '',
-        datafinal3Candidato: candidato.datafinal3Candidato ? formatDate(candidato.datafinal3Candidato) : '',
-
-        // Outros
+        datafinal3Candidato: formatDate(candidato.datafinal3Candidato),
         fotoCandidato: candidato.fotoCandidato || '',
         parentescoCandidato: candidato.parentescoCandidato || '',
         graudeparentescoenomeCandidato: candidato.graudeparentescoenomeCandidato || '',
         situacaoCandidato: candidato.situacaoCandidato || '',
     })
 
-    function formatDate(dateString?: string | Date) {
-        if (!dateString) return ''
-        const date = new Date(dateString)
-        return date.toISOString().split('T')[0]
-    }
+    const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+        const { name, value, type } = e.target;
 
+        if (type === 'checkbox' && name === 'conhecimentosinformaticaCandidato') {
+            const { checked, value: checkboxValue } = e.target as HTMLInputElement;
+            const currentValues = formData.conhecimentosinformaticaCandidato || [];
+            const newValues = checked
+                ? [...currentValues, checkboxValue]
+                : currentValues.filter((v) => v !== checkboxValue);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target
-
-        // Se for PCD e valor for "Não", limpa o campo CID
-        if (name === 'pcdCandidato' && value === 'Não') {
             setFormData(prev => ({
                 ...prev,
-                [name]: value,
-                cidareacandidato: ''
-            }))
-        } else {
-            setFormData(prev => ({
-                ...prev,
-                [name]: value
-            }))
+                conhecimentosinformaticaCandidato: newValues,
+                ...(checkboxValue === 'Outros' && !checked && { conhecimentoinfcandidato: '' }),
+            }));
+            return;
         }
-    }
 
+        setFormData(prev => ({
+            ...prev,
+            [name]: value,
+            ...(name === 'pcdCandidato' && value === 'Não' && { cidareacandidato: '' }),
+        }));
+    };
 
-
-    async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-        e.preventDefault()
-        setLoading(true)
+    async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+        e.preventDefault();
+        setLoading(true);
 
         try {
+            const body = {
+                ...formData,
+                conhecimentosinformaticaCandidato: formData.conhecimentosinformaticaCandidato.join(', '),
+            };
+
             const res = await fetch(`/api/candidatos/${candidato.idCandidato}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...formData,
-                    conhecimentosinformaticaCandidato: formData.conhecimentosinformaticaCandidato.join(', ')
-                }),
-            })
+                body: JSON.stringify(body),
+            });
 
-            if (res.ok) {
-                router.push(`/candidatos/${candidato.idCandidato}`)
-            } else {
-                throw new Error('Erro ao atualizar candidato')
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({ error: 'Falha ao atualizar candidato.' }));
+                throw new Error(errorData.error);
             }
+
+            toast.success('Candidato atualizado com sucesso!');
+            router.push(`/candidatos/${candidato.idCandidato}`);
+            router.refresh();
         } catch (error) {
-            if (error instanceof Error) {
-                alert('Erro ao atualizar candidato: ' + error.message)
-            } else {
-                alert('Erro desconhecido ao atualizar candidato.')
-            }
+            const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro desconhecido.';
+            toast.error(errorMessage);
         } finally {
-            setLoading(false)
+            setLoading(false);
         }
     }
 
-    // Verifica se o CEP é válido e busca dados de endereço
     const buscarCep = async () => {
-        const cep = formData.cepCandidato.replace(/\D/g, '')
-
-        if (cep.length !== 8) return
-
-        setLoading(true)
-
+        const cep = String(formData.cepCandidato || '').replace(/\D/g, '');
+        if (cep.length !== 8) return;
+        setLoading(true);
         try {
-            const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
-            const data = await response.json()
-
+            const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+            const data = await response.json();
             if (!data.erro) {
                 setFormData(prev => ({
                     ...prev,
                     ruaCandidato: data.logradouro,
                     bairroCandidato: data.bairro,
                     cidadeCandidato: data.localidade,
-                    estadoCandidato: data.uf
-                }))
+                    estadoCandidato: data.uf,
+                }));
             }
         } catch (error) {
-            console.error('Erro ao buscar CEP:', error)
+            console.error('Erro ao buscar CEP:', error);
+            toast.error('Não foi possível buscar o CEP.');
         } finally {
-            setLoading(false)
+            setLoading(false);
         }
-    }
+    };
 
     const tabs = [
         { id: 'pessoal', label: 'Dados Pessoais', icon: <User size={18} /> },
@@ -180,32 +182,27 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
         { id: 'formacao', label: 'Formação', icon: <CheckCircle size={18} /> },
         { id: 'experiencia', label: 'Experiência', icon: <Briefcase size={18} /> },
         { id: 'outros', label: 'Outros Dados', icon: <Circle size={18} /> },
-    ]
-
+    ];
     return (
         <div className="bg-white rounded-lg shadow-lg p-6 max-w-6xl mx-auto">
             <h1 className="text-3xl font-bold text-blue-800 mb-8 flex items-center">
                 <User className="mr-2" /> Editar Candidato
             </h1>
 
-            {/* Tabs de navegação */}
             <div className="flex overflow-x-auto mb-8 border-b border-blue-100">
                 {tabs.map(tab => (
                     <button
                         key={tab.id}
-                        className={`flex items-center px-4 py-3 font-medium transition-colors duration-200 whitespace-nowrap
-              ${activeTab === tab.id ?
-                                'text-blue-600 border-b-2 border-blue-600' :
-                                'text-gray-500 hover:text-blue-600'}`}
+                        className={`flex items-center px-4 py-3 font-medium transition-colors duration-200 whitespace-nowrap ${activeTab === tab.id ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-blue-600'}`}
                         onClick={() => setActiveTab(tab.id)}
                     >
-                        <span className="mr-2">{tab.icon}</span>
-                        {tab.label}
+                        <span className="mr-2">{tab.icon}</span>{tab.label}
                     </button>
                 ))}
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
+                {/* O seu JSX das abas pode ser colado aqui. Lembre-se de ajustar os 'value' e 'onChange' como nos exemplos anteriores para garantir a tipagem correta. */}
                 {/* Tab Dados Pessoais */}
                 {activeTab === 'pessoal' && (
                     <div className="space-y-6">
@@ -221,7 +218,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                     <input
                                         type="text"
                                         name="nomeCandidato"
-                                        value={formData.nomeCandidato}
+                                        value={String(formData.nomeCandidato || '')}
                                         onChange={handleChange}
                                         required
                                         className="w-full pl-10 pr-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -236,7 +233,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                 <input
                                     type="date"
                                     name="datanascimentoCandidato"
-                                    value={formData.datanascimentoCandidato}
+                                    value={formatDate(formData.datanascimentoCandidato as string | Date)}
                                     onChange={handleChange}
                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 />
@@ -249,7 +246,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                 <input
                                     type="text"
                                     name="cpfCandidato"
-                                    value={formData.cpfCandidato}
+                                    value={String(formData.cpfCandidato || '')}
                                     onChange={handleChange}
                                     placeholder="000.000.000-00"
                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -263,7 +260,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                 <input
                                     type="text"
                                     name="rgCandidato"
-                                    value={formData.rgCandidato}
+                                    value={String(formData.rgCandidato || '')}
                                     onChange={handleChange}
                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 />
@@ -275,7 +272,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                 </label>
                                 <select
                                     name="sexoCandidato"
-                                    value={formData.sexoCandidato}
+                                    value={String(formData.sexoCandidato || '')}
                                     onChange={handleChange}
                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 >
@@ -294,7 +291,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                     <input
                                         type="text"
                                         name="outrosexoCandidato"
-                                        value={formData.outrosexoCandidato}
+                                        value={String(formData.outrosexoCandidato || '')}
                                         onChange={handleChange}
                                         className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     />
@@ -307,7 +304,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                 </label>
                                 <select
                                     name="estadocivilCandidato"
-                                    value={formData.estadocivilCandidato}
+                                    value={String(formData.estadocivilCandidato || '')}
                                     onChange={handleChange}
                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 >
@@ -326,7 +323,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                 </label>
                                 <select
                                     name="pcdCandidato"
-                                    value={formData.pcdCandidato}
+                                    value={String(formData.pcdCandidato || '')}
                                     onChange={handleChange}
                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 >
@@ -343,7 +340,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                     <input
                                         type="text"
                                         name="cidareacandidato"
-                                        value={formData.cidareacandidato}
+                                        value={String(formData.cidareacandidato || '')}
                                         onChange={handleChange}
                                         className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     />
@@ -366,7 +363,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                         <input
                                             type="email"
                                             name="emailCandidato"
-                                            value={formData.emailCandidato}
+                                            value={String(formData.emailCandidato || '')}
                                             onChange={handleChange}
                                             required
                                             className="w-full pl-10 pr-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -385,7 +382,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                         <input
                                             type="tel"
                                             name="telefoneCandidato"
-                                            value={formData.telefoneCandidato}
+                                            value={String(formData.telefoneCandidato || '')}
                                             onChange={handleChange}
                                             required
                                             placeholder="(00) 00000-0000"
@@ -401,7 +398,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                     <input
                                         type="tel"
                                         name="telefone2Candidato"
-                                        value={formData.telefone2Candidato}
+                                        value={String(formData.telefone2Candidato || '')}
                                         onChange={handleChange}
                                         placeholder="(00) 00000-0000"
                                         className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -419,7 +416,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                     </label>
                                     <select
                                         name="cnhCandidato"
-                                        value={formData.cnhCandidato}
+                                        value={String(formData.cnhCandidato || '')}
                                         onChange={handleChange}
                                         className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     >
@@ -436,7 +433,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                         </label>
                                         <select
                                             name="categoriacnhCandidato"
-                                            value={formData.categoriacnhCandidato}
+                                            value={String(formData.categoriacnhCandidato || '')}
                                             onChange={handleChange}
                                             className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         >
@@ -463,7 +460,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                     <input
                                         type="url"
                                         name="linkedinCandidato"
-                                        value={formData.linkedinCandidato}
+                                        value={String(formData.linkedinCandidato || '')}
                                         onChange={handleChange}
                                         placeholder="https://linkedin.com/in/usuario"
                                         className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -477,7 +474,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                     <input
                                         type="url"
                                         name="facebookCandidato"
-                                        value={formData.facebookCandidato}
+                                        value={String(formData.facebookCandidato || '')}
                                         onChange={handleChange}
                                         placeholder="https://facebook.com/usuario"
                                         className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -491,7 +488,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                     <input
                                         type="url"
                                         name="instagramCandidato"
-                                        value={formData.instagramCandidato}
+                                        value={String(formData.instagramCandidato || '')}
                                         onChange={handleChange}
                                         placeholder="https://instagram.com/usuario"
                                         className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -513,7 +510,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                 <input
                                     type="text"
                                     name="cepCandidato"
-                                    value={formData.cepCandidato}
+                                    value={String(formData.cepCandidato || '')}
                                     onChange={handleChange}
                                     onBlur={buscarCep}
                                     placeholder="00000-000"
@@ -528,7 +525,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                 <input
                                     type="text"
                                     name="ruaCandidato"
-                                    value={formData.ruaCandidato}
+                                    value={String(formData.ruaCandidato || '')}
                                     onChange={handleChange}
                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 />
@@ -541,7 +538,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                 <input
                                     type="text"
                                     name="numeroCandidato"
-                                    value={formData.numeroCandidato}
+                                    value={String(formData.numeroCandidato || '')}
                                     onChange={handleChange}
                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 />
@@ -554,7 +551,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                 <input
                                     type="text"
                                     name="bairroCandidato"
-                                    value={formData.bairroCandidato}
+                                    value={String(formData.bairroCandidato || '')}
                                     onChange={handleChange}
                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 />
@@ -567,7 +564,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                 <input
                                     type="text"
                                     name="cidadeCandidato"
-                                    value={formData.cidadeCandidato}
+                                    value={String(formData.cidadeCandidato || '')}
                                     onChange={handleChange}
                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 />
@@ -580,7 +577,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                 <input
                                     type="text"
                                     name="estadoCandidato"
-                                    value={formData.estadoCandidato}
+                                    value={String(formData.estadoCandidato || '')}
                                     onChange={handleChange}
                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 />
@@ -601,7 +598,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                     </label>
                                     <select
                                         name="escolaridadeCandidato"
-                                        value={formData.escolaridadeCandidato}
+                                        value={String(formData.escolaridadeCandidato || '')}
                                         onChange={handleChange}
                                         className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     >
@@ -622,7 +619,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                     </label>
                                     <select
                                         name="vagainteresseCandidato"
-                                        value={formData.vagainteresseCandidato}
+                                        value={String(formData.vagainteresseCandidato || '')}
                                         onChange={handleChange}
                                         className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     >
@@ -650,7 +647,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                     </label>
                                     <textarea
                                         name="conhecimentosCandidato"
-                                        value={formData.conhecimentosCandidato}
+                                        value={String(formData.conhecimentosCandidato || '')}
                                         onChange={handleChange}
                                         rows={3}
                                         className="w-full px-3 py-2 border text-gray-600 border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -668,7 +665,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                     </label>
                                     <select
                                         name="wordCandidato"
-                                        value={formData.wordCandidato}
+                                        value={String(formData.wordCandidato || '')}
                                         onChange={handleChange}
                                         className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     >
@@ -686,7 +683,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                     </label>
                                     <select
                                         name="excelCandidato"
-                                        value={formData.excelCandidato}
+                                        value={String(formData.excelCandidato || '')}
                                         onChange={handleChange}
                                         className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     >
@@ -704,7 +701,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                     </label>
                                     <select
                                         name="powerpointCandidato"
-                                        value={formData.powerpointCandidato}
+                                        value={String(formData.powerpointCandidato || '')}
                                         onChange={handleChange}
                                         className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     >
@@ -768,7 +765,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                     </label>
                                     <textarea
                                         name="conhecimentoinfcandidato"
-                                        value={formData.conhecimentoinfcandidato}
+                                        value={String(formData.conhecimentoinfcandidato || '')}
                                         onChange={handleChange}
                                         rows={3}
                                         className="w-full px-3 py-2 border text-gray-600 border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -792,7 +789,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                 </label>
                                 <select
                                     name="possuiexperienciaCandidato"
-                                    value={formData.possuiexperienciaCandidato}
+                                    value={String(formData.possuiexperienciaCandidato || '')}
                                     onChange={handleChange}
                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 >
@@ -815,7 +812,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                                 <input
                                                     type="text"
                                                     name="empresaCandidato"
-                                                    value={formData.empresaCandidato}
+                                                    value={String(formData.empresaCandidato || '')}
                                                     onChange={handleChange}
                                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 />
@@ -828,7 +825,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                                 <input
                                                     type="text"
                                                     name="local1Candidato"
-                                                    value={formData.local1Candidato}
+                                                    value={String(formData.local1Candidato || '')}
                                                     onChange={handleChange}
                                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 />
@@ -841,7 +838,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                                 <input
                                                     type="date"
                                                     name="datainicioCandidato"
-                                                    value={formData.datainicioCandidato}
+                                                    value={formatDate(formData.datainicioCandidato as string | Date)}
                                                     onChange={handleChange}
                                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 />
@@ -854,7 +851,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                                 <input
                                                     type="date"
                                                     name="datafinalCandidato"
-                                                    value={formData.datafinalCandidato}
+                                                    value={formatDate(formData.datafinalCandidato as string | Date)}
                                                     onChange={handleChange}
                                                     disabled={formData.trabalha1Candidato === 'Sim'}
                                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -867,7 +864,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                                 </label>
                                                 <select
                                                     name="trabalha1Candidato"
-                                                    value={formData.trabalha1Candidato}
+                                                    value={String(formData.trabalha1Candidato || '')}
                                                     onChange={handleChange}
                                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 >
@@ -883,7 +880,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                                 </label>
                                                 <textarea
                                                     name="atividadesdesenvolvidas1Candidato"
-                                                    value={formData.atividadesdesenvolvidas1Candidato}
+                                                    value={String(formData.atividadesdesenvolvidas1Candidato || '')}
                                                     onChange={handleChange}
                                                     rows={3}
                                                     className="text-gray-500 w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -903,7 +900,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                                 <input
                                                     type="text"
                                                     name="empresa2Candidato"
-                                                    value={formData.empresa2Candidato}
+                                                    value={String(formData.empresa2Candidato || '')}
                                                     onChange={handleChange}
                                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 />
@@ -916,7 +913,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                                 <input
                                                     type="text"
                                                     name="local2Candidato"
-                                                    value={formData.local2Candidato}
+                                                    value={String(formData.local2Candidato || '')}
                                                     onChange={handleChange}
                                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 />
@@ -929,7 +926,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                                 <input
                                                     type="date"
                                                     name="datainicio2Candidato"
-                                                    value={formData.datainicio2Candidato}
+                                                    value={formatDate(formData.datainicio2Candidato as string | Date)}
                                                     onChange={handleChange}
                                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 />
@@ -942,7 +939,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                                 <input
                                                     type="date"
                                                     name="datafinal2Candidato"
-                                                    value={formData.datafinal2Candidato}
+                                                    value={formatDate(formData.datafinal2Candidato as string | Date)}
                                                     onChange={handleChange}
                                                     disabled={formData.trabalha2Candidato === 'Sim'}
                                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -955,7 +952,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                                 </label>
                                                 <select
                                                     name="trabalha2Candidato"
-                                                    value={formData.trabalha2Candidato}
+                                                    value={String(formData.trabalha2Candidato || '')}
                                                     onChange={handleChange}
                                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 >
@@ -971,7 +968,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                                 </label>
                                                 <textarea
                                                     name="atividadesdesenvolvidas2Candidato"
-                                                    value={formData.atividadesdesenvolvidas2Candidato}
+                                                    value={String(formData.atividadesdesenvolvidas2Candidato || '')}
                                                     onChange={handleChange}
                                                     rows={3}
                                                     className="w-full text-gray-500 px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -991,7 +988,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                                 <input
                                                     type="text"
                                                     name="empresa3Candidato"
-                                                    value={formData.empresa3Candidato}
+                                                    value={String(formData.empresa3Candidato || '')}
                                                     onChange={handleChange}
                                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 />
@@ -1004,7 +1001,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                                 <input
                                                     type="text"
                                                     name="local3Candidato"
-                                                    value={formData.local3Candidato}
+                                                    value={String(formData.local3Candidato || '')}
                                                     onChange={handleChange}
                                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 />
@@ -1017,7 +1014,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                                 <input
                                                     type="date"
                                                     name="datainicio3Candidato"
-                                                    value={formData.datainicio3Candidato}
+                                                    value={formatDate(formData.datainicio3Candidato as string | Date)}
                                                     onChange={handleChange}
                                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 />
@@ -1030,7 +1027,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                                 <input
                                                     type="date"
                                                     name="datafinal3Candidato"
-                                                    value={formData.datafinal3Candidato}
+                                                    value={formatDate(formData.datafinal3Candidato as string | Date)}
                                                     onChange={handleChange}
                                                     disabled={formData.trabalha3Candidato === 'Sim'}
                                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -1043,7 +1040,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                                 </label>
                                                 <select
                                                     name="trabalha3Candidato"
-                                                    value={formData.trabalha3Candidato}
+                                                    value={String(formData.trabalha3Candidato || '')}
                                                     onChange={handleChange}
                                                     className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 >
@@ -1059,7 +1056,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                                 </label>
                                                 <textarea
                                                     name="atividadesdesenvolvidas3Candidato"
-                                                    value={formData.atividadesdesenvolvidas3Candidato}
+                                                    value={String(formData.atividadesdesenvolvidas3Candidato || '')}
                                                     onChange={handleChange}
                                                     rows={3}
                                                     className="w-full text-gray-500 px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -1086,7 +1083,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                     <input
                                         type="url"
                                         name="fotoCandidato"
-                                        value={formData.fotoCandidato}
+                                        value={String(formData.fotoCandidato || '')}
                                         onChange={handleChange}
                                         placeholder="https://exemplo.com/foto.jpg"
                                         className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -1099,7 +1096,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                     </label>
                                     <select
                                         name="parentescoCandidato"
-                                        value={formData.parentescoCandidato}
+                                        value={String(formData.parentescoCandidato || '')}
                                         onChange={handleChange}
                                         className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     >
@@ -1117,7 +1114,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                         <input
                                             type="text"
                                             name="graudeparentescoenomeCandidato"
-                                            value={formData.graudeparentescoenomeCandidato}
+                                            value={String(formData.graudeparentescoenomeCandidato || '')}
                                             onChange={handleChange}
                                             className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         />
@@ -1130,7 +1127,7 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                                     </label>
                                     <select
                                         name="situacaoCandidato"
-                                        value={formData.situacaoCandidato}
+                                        value={String(formData.situacaoCandidato || '')}
                                         onChange={handleChange}
                                         className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     >
@@ -1146,31 +1143,10 @@ export default function FormEditarCandidato({ candidato }: { candidato: any }) {
                     </div>
                 )}
 
-                {/* Botões de ação */}
                 <div className="flex justify-end space-x-4 pt-6 border-t border-blue-100">
-                    <button
-                        type="button"
-                        onClick={() => router.push('/candidatos')}
-                        className="px-4 py-2 border border-blue-300 text-blue-700 rounded-md hover:bg-blue-50 transition-colors"
-                    >
-                        Cancelar
-                    </button>
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                    >
-                        {loading ? (
-                            <>
-                                <Loader2 className="animate-spin mr-2" size={18} />
-                                Salvando...
-                            </>
-                        ) : (
-                            <>
-                                <Save className="mr-2" size={18} />
-                                Salvar Alterações
-                            </>
-                        )}
+                    <button type="button" onClick={() => router.push('/candidatos')} className="px-4 py-2 border border-blue-300 text-blue-700 rounded-md hover:bg-blue-50 transition-colors">Cancelar</button>
+                    <button type="submit" disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center">
+                        {loading ? <><Loader2 className="animate-spin mr-2" size={18} />Salvando...</> : <><Save className="mr-2" size={18} />Salvar Alterações</>}
                     </button>
                 </div>
             </form>

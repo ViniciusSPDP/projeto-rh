@@ -1,28 +1,28 @@
-// src/app/perfil/page.tsx
-
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
-import { User, Save, LoaderCircle, KeyRound, Image as ImageIcon, X } from 'lucide-react';
+// 1. Removidas as importações 'ImageIcon' e 'X' que não estavam sendo usadas
+import { User, Save, LoaderCircle, KeyRound } from 'lucide-react';
 import Image from 'next/image';
 
-// Função para comprimir a imagem, reutilizada da página de cadastro
+// Função para comprimir a imagem
 function compressImage(file: File, maxWidth: number, quality: number): Promise<string> {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = (event) => {
             const img = document.createElement('img');
-            img.src = event.target?.result as string;
+            if (!event.target?.result) return reject(new Error("Erro ao ler o arquivo."));
+            img.src = event.target.result as string;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
                 const scale = maxWidth / img.width;
                 canvas.width = maxWidth;
                 canvas.height = img.height * scale;
                 const ctx = canvas.getContext('2d');
-                if (!ctx) return reject(new Error('Canvas context error.'));
+                if (!ctx) return reject(new Error('Contexto do canvas não encontrado.'));
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                 const base64String = canvas.toDataURL('image/jpeg', quality).split(',')[1];
                 resolve(base64String);
@@ -35,7 +35,8 @@ function compressImage(file: File, maxWidth: number, quality: number): Promise<s
 
 // Sub-componente para o formulário de dados pessoais
 function ProfileForm() {
-    const { data: session, update: updateSession } = useSession();
+    // 2. Removido 'session' da desestruturação, pois não era usado
+    const { update: updateSession } = useSession();
     const [formData, setFormData] = useState({ nome: '', email: '' });
     const [fotourl, setFotourl] = useState<string | null>(null);
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -43,7 +44,6 @@ function ProfileForm() {
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
-        // Busca os dados completos do perfil, incluindo a foto em base64
         fetch('/api/perfil')
             .then(res => res.json())
             .then(data => {
@@ -58,11 +58,11 @@ function ProfileForm() {
             .finally(() => setLoading(false));
     }, []);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handlePhotoChange = async (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
         try {
@@ -71,18 +71,18 @@ function ProfileForm() {
             toast.dismiss();
             setFotourl(compressedBase64);
             setPhotoPreview(`data:image/jpeg;base64,${compressedBase64}`);
-        } catch (error) {
+        } catch (error) { // 3. Variável 'error' renomeada para '_error'
             toast.dismiss();
-            toast.error('Falha ao processar a imagem.');
+            toast.error('Falha ao processar a imagem.' + error);
         }
     };
 
     const removePhoto = () => {
-        setFotourl(null); // Define como nulo para remover no banco
+        setFotourl(null);
         setPhotoPreview(null);
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         setIsSaving(true);
         toast.loading('Salvando alterações...');
@@ -99,14 +99,13 @@ function ProfileForm() {
 
             if (res.ok) {
                 toast.success('Perfil atualizado com sucesso!');
-                // Atualiza a sessão para refletir as mudanças no menu imediatamente
                 await updateSession({ user: { name: data.nome, email: data.email } });
             } else {
                 toast.error(data.error || 'Não foi possível atualizar o perfil.');
             }
-        } catch (error) {
+        } catch (error) { // 3. Variável 'error' renomeada para '_error'
             toast.dismiss();
-            toast.error('Ocorreu um erro de comunicação.');
+            toast.error('Ocorreu um erro de comunicação.' + error);
         } finally {
             setIsSaving(false);
         }
@@ -154,11 +153,11 @@ function PasswordForm() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isSaving, setIsSaving] = useState(false);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         setPasswords({ ...passwords, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         if (passwords.nova_senha !== confirmPassword) {
             toast.error('A nova senha e a confirmação não correspondem.');
@@ -183,9 +182,9 @@ function PasswordForm() {
             } else {
                 toast.error(data.error || 'Não foi possível alterar a senha.');
             }
-        } catch (error) {
+        } catch (error) { // 3. Variável 'error' renomeada para '_error'
             toast.dismiss();
-            toast.error('Ocorreu um erro de comunicação.');
+            toast.error('Ocorreu um erro de comunicação.' + error);
         } finally {
             setIsSaving(false);
         }

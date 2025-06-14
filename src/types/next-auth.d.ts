@@ -1,6 +1,6 @@
-// src/types/next-auth.d.ts
-
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import NextAuth, { DefaultSession, DefaultUser } from "next-auth"
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { JWT } from "next-auth/jwt"
 
 declare module "next-auth" {
@@ -10,16 +10,16 @@ declare module "next-auth" {
   interface Session {
     user: {
       id: string;
-      //fotourl?: string | null; // <-- ADICIONADO
+      fotourl?: string | null;
     } & DefaultSession["user"] // Mantém as propriedades padrão (name, email, image)
   }
 
   /**
    * O objeto `user` que vem do banco de dados através do `authorize`.
    */
-  //interface User extends DefaultUser {
-   // fotourl?: string | null; // <-- ADICIONADO
-  //}
+  interface User {
+    fotourl?: string | null;
+  }
 }
 
 /**
@@ -28,6 +28,6 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     id: string;
-    fotourl?: string | null; // <-- ADICIONADO
+    fotourl?: string | null;
   }
 }

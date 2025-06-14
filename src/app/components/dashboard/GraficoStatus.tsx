@@ -1,16 +1,22 @@
 'use client'
 
-import { Pie, Doughnut } from 'react-chartjs-2'
+// 1. Removido 'Pie' da importação, pois não estava sendo usado.
+import { Doughnut } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
   ArcElement,
   Tooltip,
   Legend,
+  TooltipItem // 2. Importado o tipo TooltipItem
 } from 'chart.js'
 
 ChartJS.register(ArcElement, Tooltip, Legend)
 
-export default function GraficoStatus({ dados }: { dados: { status: string, total: number }[] }) {
+interface GraficoStatusProps {
+    dados: { status: string, total: number }[];
+}
+
+export default function GraficoStatus({ dados }: GraficoStatusProps) {
   // Cores mais modernas e acessíveis
   const cores = [
     '#3b82f6', // azul moderno
@@ -65,10 +71,12 @@ export default function GraficoStatus({ dados }: { dados: { status: string, tota
         padding: 12,
         displayColors: true,
         callbacks: {
-          label: function(context: any) {
+          // 3. Corrigido o tipo 'any' para o tipo específico do Chart.js
+          label: function(context: TooltipItem<'doughnut'>) {
             const total = dados.reduce((sum, item) => sum + item.total, 0)
-            const percentage = ((context.raw / total) * 100).toFixed(1)
-            return `${context.label}: ${context.raw} (${percentage}%)`
+            const value = typeof context.raw === 'number' ? context.raw : 0;
+            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+            return `${context.label}: ${value} (${percentage}%)`
           }
         }
       },
@@ -93,7 +101,6 @@ export default function GraficoStatus({ dados }: { dados: { status: string, tota
         <Doughnut data={chartData} options={options} />
       </div>
 
-      {/* Legenda personalizada adicional */}
       <div className="mt-6 space-y-2">
         {dados.map((item, index) => {
           const percentage = total > 0 ? ((item.total / total) * 100).toFixed(1) : '0'
@@ -102,7 +109,7 @@ export default function GraficoStatus({ dados }: { dados: { status: string, tota
               <div className="flex items-center space-x-3">
                 <div 
                   className="w-3 h-3 rounded-full" 
-                  style={{ backgroundColor: cores[index] }}
+                  style={{ backgroundColor: cores[index % cores.length] }} // Evita erro se tiver mais dados que cores
                 ></div>
                 <span className="text-sm font-medium text-slate-700">{item.status}</span>
               </div>

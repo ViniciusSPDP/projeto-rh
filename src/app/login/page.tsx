@@ -1,9 +1,8 @@
 'use client'
 
 import { signIn } from 'next-auth/react'
-import { useState } from 'react'
+import { useState, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 import { LogIn, AtSign, KeyRound, LoaderCircle, Briefcase } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
@@ -14,7 +13,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault()
     setLoading(true)
 

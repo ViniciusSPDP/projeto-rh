@@ -211,7 +211,7 @@ export default function DetalhesCandidato({ candidato }: DetalhesCandidatoProps)
                         <Link href={`/candidatos/editar/${candidato.idCandidato}`} className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
                             <Clipboard className="w-4 h-4 mr-2" /> Editar Candidato
                         </Link>
-                        <BotaoImprimir id={candidato.idCandidato} />
+                        <BotaoImprimir id={Number(candidato.idCandidato)} />
                     </div>
                     <div className="flex gap-2">
                         <button disabled={isPending} onClick={() => atualizarStatus('Aprovado')} className={`inline-flex cursor-pointer items-center px-4 py-2 rounded-md text-white transition-colors disabled:cursor-wait disabled:bg-green-400 bg-green-600 hover:bg-green-700`}>

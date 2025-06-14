@@ -3,9 +3,9 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
-import { Menu as MenuIcon, X, LogOut, User, Settings, ChevronDown, Bell, Search, Briefcase, Users, UserPlus } from 'lucide-react'
+import { Menu as MenuIcon, X, LogOut, User, ChevronDown, Bell, Briefcase, Users, UserPlus } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 

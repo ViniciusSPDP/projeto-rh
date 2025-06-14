@@ -3,7 +3,7 @@
 import prisma from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { Briefcase, FileText, UserPlus, Users, ArrowLeft, ClipboardList, Share2, Tag, ShieldAlert } from 'lucide-react'
+import { Briefcase, FileText, UserPlus, Users, ArrowLeft, ClipboardList, Share2, ShieldAlert } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import EtapaSelect from '@/app/components/EtapaSelect'

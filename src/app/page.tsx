@@ -1,7 +1,7 @@
 // src/app/page.tsx
 
 import Link from 'next/link'
-import { ArrowRight, Briefcase, Users, PieChart, Zap } from 'lucide-react'
+import { ArrowRight, Briefcase, Users, PieChart } from 'lucide-react'
 
 // Para manter o código organizado, podemos criar pequenos componentes aqui mesmo.
 // Se eles crescerem, podem ser movidos para a pasta /components.

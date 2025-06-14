@@ -11,7 +11,6 @@ import {
   ChevronRight,
   ArrowLeft,
   Check,
-  Filter, // Ícone para a seção de filtros
 } from 'lucide-react'
 import Link from 'next/link'
 

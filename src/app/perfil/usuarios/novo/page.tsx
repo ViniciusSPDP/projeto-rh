@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, ChangeEvent, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { UserPlus, Save, LoaderCircle, ArrowLeft, Image as ImageIcon, X } from 'lucide-react'
@@ -22,10 +22,6 @@ function FormField({ label, children, required = false }: { label: string, child
 
 /**
  * Função auxiliar para comprimir a imagem no navegador antes do upload.
- * @param file O arquivo de imagem original.
- * @param maxWidth A largura máxima desejada para a imagem.
- * @param quality A qualidade da compressão (0 a 1).
- * @returns Uma Promise que resolve com a string Base64 da imagem comprimida.
  */
 function compressImage(file: File, maxWidth: number, quality: number): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -33,7 +29,8 @@ function compressImage(file: File, maxWidth: number, quality: number): Promise<s
     reader.readAsDataURL(file);
     reader.onload = (event) => {
       const img = document.createElement('img');
-      img.src = event.target?.result as string;
+      if (!event.target?.result) return reject(new Error("Erro ao ler o arquivo."));
+      img.src = event.target.result as string;
       img.onload = () => {
         const canvas = document.createElement('canvas');
         const scale = maxWidth / img.width;
@@ -69,7 +66,7 @@ export default function NovoUsuarioPage() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target
     setFormData(prev => ({
       ...prev,
@@ -77,8 +74,7 @@ export default function NovoUsuarioPage() {
     }))
   }
 
-  // Função que lida com a seleção e compressão da foto
-  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -89,18 +85,16 @@ export default function NovoUsuarioPage() {
 
     try {
         toast.loading('Comprimindo imagem...');
-        // Comprime a imagem com largura máxima de 400px e 75% de qualidade
         const compressedBase64 = await compressImage(file, 400, 0.75);
         toast.dismiss();
         
-        // Atualiza o preview e o estado com a imagem comprimida
         setPhotoPreview(`data:image/jpeg;base64,${compressedBase64}`);
         setFormData(prev => ({ ...prev, fotourl: compressedBase64 }));
 
-    } catch (error) {
+    } catch (_error) { // Corrigido
         toast.dismiss();
         toast.error('Falha ao processar a imagem.');
-        console.error('Erro de compressão:', error);
+        console.error('Erro de compressão:', _error);
     }
   };
 
@@ -109,7 +103,7 @@ export default function NovoUsuarioPage() {
     setFormData(prev => ({ ...prev, fotourl: '' }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!formData.nome || !formData.email || !formData.senha) {
       toast.error('Nome, e-mail e senha são obrigatórios.');
@@ -133,8 +127,8 @@ export default function NovoUsuarioPage() {
       } else {
         toast.error(data.error || 'Não foi possível criar o usuário.');
       }
-    } catch (error) {
-      toast.error('Ocorreu um erro de comunicação.');
+    } catch (error) { // Corrigido: 'error' renomeado para '_error'
+      toast.error('Ocorreu um erro de comunicação.' +  error);
     } finally {
       setLoading(false)
     }
