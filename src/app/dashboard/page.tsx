@@ -3,6 +3,8 @@ import GraficoWrapper from './GraficoWrapper'
 import Link from 'next/link'
 import { Users, TrendingUp, Clock, FileText, Calendar, Search } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardPage() {
   // Dados existentes
   const total = await prisma.candidatos.count()
