@@ -1,6 +1,6 @@
 // src/app/layout.tsx
 
-import type { Metadata } from "next";
+import { Metadata, Viewport } from 'next'; // 1. Importe o 'Viewport'
 import { Inter } from "next/font/google";
 import "./globals.css";
 import LayoutWrapper from "./LayoutWrapper";
@@ -16,20 +16,19 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  // Título que aparece na aba do navegador
   title: {
-    default: 'Conexão RH - Encontre sua Vaga', // Título padrão
-    template: '%s | Conexão RH', // Usado em páginas filhas para adicionar um sufixo
+    default: 'Conexão RH - Encontre sua Vaga',
+    template: '%s | Conexão RH',
   },
-  // Descrição do seu site (muito importante para o Google)
   description: 'Plataforma de recrutamento e seleção para encontrar as melhores vagas de emprego e os talentos ideais para sua empresa.',
-  // Palavras-chave relevantes para o seu negócio
   keywords: ['vagas', 'emprego', 'recrutamento', 'seleção', 'RH', 'carreira', 'trabalho'],
-  // Define o autor ou a empresa
   authors: [{ name: 'S4R41VA' }],
-  // Define a cor da barra de endereço em navegadores mobile
+};
+
+export const viewport: Viewport = {
   themeColor: '#ffffff',
 };
+
 
 export default function RootLayout({
   children,
