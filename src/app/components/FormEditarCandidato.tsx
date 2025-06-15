@@ -1132,10 +1132,11 @@ export default function FormEditarCandidato({ candidato }: FormEditarCandidatoPr
                                         className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     >
                                         <option value="">Selecione</option>
-                                        <option value="Ativo">Ativo</option>
-                                        <option value="Inativo">Inativo</option>
-                                        <option value="Em Ánalise">Em Ánalise</option>
-                                        <option value="Descartado">Descartado</option>
+                                        <option value="Aprovado">Aprovado</option>
+                                        <option value="Reprovado">Reprovado</option>
+                                        <option value="Em análise">Em análise</option>
+                                        <option value="Contratado">Contratado</option>
+                                        <option value="Em processo">Em processo</option>
                                     </select>
                                 </div>
                             </div>

@@ -16,8 +16,19 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Sistema de RH",
-  description: "Gerenciamento de Vagas e Candidatos",
+  // Título que aparece na aba do navegador
+  title: {
+    default: 'Conexão RH - Encontre sua Vaga', // Título padrão
+    template: '%s | Conexão RH', // Usado em páginas filhas para adicionar um sufixo
+  },
+  // Descrição do seu site (muito importante para o Google)
+  description: 'Plataforma de recrutamento e seleção para encontrar as melhores vagas de emprego e os talentos ideais para sua empresa.',
+  // Palavras-chave relevantes para o seu negócio
+  keywords: ['vagas', 'emprego', 'recrutamento', 'seleção', 'RH', 'carreira', 'trabalho'],
+  // Define o autor ou a empresa
+  authors: [{ name: 'S4R41VA' }],
+  // Define a cor da barra de endereço em navegadores mobile
+  themeColor: '#ffffff',
 };
 
 export default function RootLayout({
@@ -27,7 +38,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-br" className={`${inter.variable} h-full`}>
-      <body 
+      <body
         className="antialiased bg-gray-50 h-full font-sans"
         suppressHydrationWarning={true}
       >

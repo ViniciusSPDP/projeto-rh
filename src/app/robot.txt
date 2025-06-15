@@ -1,0 +1,8 @@
+# src/app/robots.txt
+User-agent: *
+Allow: /
+
+Disallow: /perfil/
+Disallow: /dashboard/
+
+Sitemap: https://s4r41va.com/sitemap.xml

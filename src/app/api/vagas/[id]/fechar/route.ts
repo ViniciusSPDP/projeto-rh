@@ -1,43 +1,67 @@
-import { NextRequest, NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
+import { NextRequest, NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
 
 // Definindo a interface para o contexto da rota
 interface Context {
   params: {
     id: string;
-  }
+  };
 }
 
-export async function PATCH(
-  req: NextRequest,
-  context: Context // Corrigido o tipo 'any'
-) {
-  const vagaId = Number(context.params.id)
+export async function PATCH(req: NextRequest, context: Context) {
+  const vagaId = Number(context.params.id);
 
   if (isNaN(vagaId)) {
-    return NextResponse.json({ error: 'ID da vaga inválido' }, { status: 400 })
+    return NextResponse.json({ error: 'ID da vaga inválido' }, { status: 400 });
   }
 
   try {
-    const vaga = await prisma.vaga.findUnique({
-      where: { idVaga: vagaId },
-    })
+    const vagaAtualizada = await prisma.$transaction(async (tx) => {
+      const candidatosDaVaga = await tx.vagaCandidato.findMany({
+        where: {
+          vagaId: vagaId,
+        },
+      });
 
-    if (!vaga) {
-      return NextResponse.json({ error: 'Vaga não encontrada' }, { status: 404 })
+      for (const vagaCandidato of candidatosDaVaga) {
+        const novaSituacao =
+          vagaCandidato.etapa === 'Contratado' ? 'Contratado' : 'Reprovado';
+
+        // CORREÇÃO AQUI: Alterado de 'candidato' para 'candidatos'
+        await tx.candidatos.update({ 
+          where: {
+            idCandidato: vagaCandidato.candidatoId,
+          },
+          data: {
+            situacaoCandidato: novaSituacao,
+          },
+        });
+      }
+
+      const vaga = await tx.vaga.update({
+        where: {
+          idVaga: vagaId,
+        },
+        data: {
+          status: 'Encerrada',
+        },
+      });
+      
+      return vaga;
+    });
+
+    return NextResponse.json(vagaAtualizada);
+
+  } catch (error) {
+    console.error('Erro ao encerrar vaga:', error);
+    
+    if (error instanceof Error && error.message.includes('Record to update not found')) {
+      return NextResponse.json({ error: 'Vaga não encontrada' }, { status: 404 });
     }
 
-    const vagaAtualizada = await prisma.vaga.update({
-      where: { idVaga: vagaId },
-      data: { status: 'Encerrada' },
-    })
-
-    return NextResponse.json(vagaAtualizada)
-  } catch (error) {
-    console.error('Erro ao encerrar vaga:', error)
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { error: 'Erro interno do servidor ao tentar encerrar a vaga.' },
       { status: 500 }
-    )
+    );
   }
 }

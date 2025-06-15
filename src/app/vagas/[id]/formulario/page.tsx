@@ -4,6 +4,57 @@ import prisma from '@/lib/prisma'
 import FormCandidatoPublico from '@/app/components/FormCandidatoPublico' // Corrigindo o caminho da importação
 import { AlertTriangle } from 'lucide-react'
 import Link from 'next/link' // Certifique-se de que o Link está importado
+import { Metadata } from 'next'; // 1. Importe o tipo Metadata
+
+// 2. Crie a função generateMetadata
+interface FormularioPageProps {
+  params: { id: string };
+}
+
+export async function generateMetadata({ params }: FormularioPageProps): Promise<Metadata> {
+  const vagaId = Number(params.id);
+
+  if (isNaN(vagaId)) {
+    return {
+      title: 'Vaga não encontrada',
+      description: 'Esta vaga não foi encontrada em nosso sistema.',
+    };
+  }
+
+  const vaga = await prisma.vaga.findUnique({
+    where: { idVaga: vagaId },
+  });
+
+  if (!vaga) {
+    return {
+      title: 'Vaga não encontrada',
+      description: 'Esta vaga não foi encontrada em nosso sistema.',
+    };
+  }
+
+  const tituloVaga = `Candidate-se para: ${vaga.titulo}`;
+  
+  // CORREÇÃO AQUI: Verificamos se vaga.descricao não é nula antes de usá-la.
+  const descricaoVaga = vaga.descricao
+    ? vaga.descricao.substring(0, 155).trim() + '...'
+    : `Veja mais detalhes e candidate-se para a vaga de ${vaga.titulo}.`; // Descrição padrão
+
+  return {
+    title: tituloVaga,
+    description: descricaoVaga,
+    openGraph: {
+      title: tituloVaga,
+      description: descricaoVaga,
+      type: 'article',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: tituloVaga,
+      description: descricaoVaga,
+    },
+  };
+}
+
 
 
 // Componente para a tela de vaga encerrada (sem alterações)
@@ -21,7 +72,7 @@ function VagaEncerrada() {
         </p>
         {/* --- ALTERAÇÃO AQUI --- */}
         <div className="mt-6">
-          <Link 
+          <Link
             href="/banco-de-talentos"
             className="inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
           >
@@ -51,7 +102,7 @@ export default async function FormularioVagaPage({ params }: { params: { id: str
   if (vaga.status === 'Encerrada') {
     return <VagaEncerrada />;
   }
-  
+
   // --- ALTERAÇÃO AQUI ---
   // Envolvemos o formulário em um elemento 'main' com a cor de fundo padrão do sistema.
   return (

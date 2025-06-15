@@ -1,7 +1,13 @@
 // src/app/page.tsx
 
 import Link from 'next/link'
+import { Metadata } from 'next';
 import { ArrowRight, Briefcase, Users, PieChart } from 'lucide-react'
+
+export const metadata: Metadata = {
+  title: 'Início - Bem-vindo ao Conexão RH', // Este título sobrescreve o padrão
+  description: 'Encontre as melhores oportunidades de carreira e conecte-se com as empresas certas. Comece sua jornada profissional aqui.',
+};
 
 // Para manter o código organizado, podemos criar pequenos componentes aqui mesmo.
 // Se eles crescerem, podem ser movidos para a pasta /components.
