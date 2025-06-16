@@ -210,7 +210,7 @@ export default async function CandidatosPage({ searchParams }: CandidatosPagePro
                         </div>
                         <div>
                           <div className="font-medium">{candidato.nomeCandidato}</div>
-                          <div className="text-xs text-gray-500 hidden sm:block">{candidato.emailCandidato}</div>
+                          <div className="text-xs text-gray-500 hidden sm:block">{candidato.cidadeCandidato}</div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-700 hidden md:table-cell">
