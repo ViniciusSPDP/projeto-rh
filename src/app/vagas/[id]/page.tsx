@@ -8,6 +8,8 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import EtapaSelect from '@/app/components/EtapaSelect'
 import { BotaoFecharVaga } from '@/app/components/BotaoFecharVaga'
+import { BotaoEditarVaga } from '@/app/components/BotaoEditarVaga'
+import { BotaoExcluirVaga } from '@/app/components/BotaoExcluirVaga'
 
 
 async function getVaga(id: number) {
@@ -92,7 +94,8 @@ export default async function DetalheVagaPage({ params }: { params: { id: string
                 <span>Página Pública</span>
               </span>
             )}
-            
+            <BotaoEditarVaga vaga={{ idVaga: vaga.idVaga, titulo: vaga.titulo, descricao: vaga.descricao }} />
+            <BotaoExcluirVaga vagaId={vaga.idVaga} />
             {isVagaAberta && <BotaoFecharVaga vagaId={vaga.idVaga} />}
           </div>
         </div>
