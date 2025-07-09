@@ -1,10 +1,10 @@
 import prisma from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import BotaoPrint from '@/app/components/BotaoPrint'
-import Image from 'next/image' // 1. Importar o componente Image
+import Image from 'next/image'
 import {
     Briefcase, MapPin, Phone, Mail, Award,
-    GraduationCap, Globe, Terminal, Check, Car
+    GraduationCap, Globe, Terminal, Check, Car, MessageSquare
 } from 'lucide-react'
 import { Candidatos } from '@prisma/client'
 
@@ -27,7 +27,7 @@ export default async function ImprimirCurriculoPage({ params }: ImprimirCurricul
 
     function formatarData(data: string | Date | null) {
         if (!data) return '—'
-        return new Date(data).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) // Adicionado timeZone para consistência
+        return new Date(data).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
     }
 
     function calcularIdade(dataNascimento: string | Date | null) {
@@ -117,8 +117,7 @@ export default async function ImprimirCurriculoPage({ params }: ImprimirCurricul
                     </div>
 
                     <div className="flex flex-col items-center gap-2 ml-4">
-                        <div className="w-36 h-36 relative"> 
-                            {/* 2. Substituído <img> por <Image> */}
+                        <div className="w-36 h-36 relative">
                             <Image
                                 src="/Logo.png"
                                 alt="Logo Conexão Distribuidora"
@@ -222,6 +221,19 @@ export default async function ImprimirCurriculoPage({ params }: ImprimirCurricul
                                 </h2>
                                 <div className="text-sm">
                                     <p>{candidato.conhecimentosCandidato}</p>
+                                </div>
+                            </section>
+                        )}
+
+                        {/* Nova seção para Observações Internas */}
+                        {candidato.observacaoCandidato && candidato.observacaoCandidato.trim() !== '' && (
+                            <section>
+                                <h2 className="font-bold text-blue-800 flex items-center border-b border-gray-200 pb-1 mb-2">
+                                    <MessageSquare className="w-4 h-4 mr-1 text-blue-600" />
+                                    OBSERVAÇÕES INTERNAS
+                                </h2>
+                                <div className="text-sm">
+                                    <p>{candidato.observacaoCandidato}</p>
                                 </div>
                             </section>
                         )}

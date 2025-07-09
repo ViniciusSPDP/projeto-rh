@@ -67,8 +67,11 @@ model Candidatos {
   situacaoCandidato                 String?
   opcionalCandidato                 String?
   observacaoCandidato               String?
+  observacaoUpdatedAt         DateTime?
 
   vagas VagaCandidato[]
+  observacoesHistorico        ObservacaoHistorico[]
+
 }
 
 model usuario {
@@ -103,4 +106,19 @@ model VagaCandidato {
   candidato Candidatos @relation(fields: [candidatoId], references: [idCandidato])
 
   @@unique([vagaId, candidatoId])
+}
+
+model ObservacaoHistorico {
+  id              Int      @id @default(autoincrement())
+  candidatoId     BigInt
+  observacao      String   @db.Text
+  createdAt       DateTime @default(now())
+  createdBy       String?  // Nome do usuário que criou
+  updatedAt       DateTime @updatedAt
+  updatedBy       String?  // Nome do usuário que editou
+  isDeleted       Boolean  @default(false) // Soft delete
+  
+  candidato       Candidatos @relation(fields: [candidatoId], references: [idCandidato], onDelete: Cascade)
+  
+  @@index([candidatoId])
 }

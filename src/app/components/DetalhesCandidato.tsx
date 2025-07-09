@@ -1,31 +1,66 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import Link from 'next/link'
-import Image from 'next/image' // 1. Importado o componente Image
+import Image from 'next/image'
 import BotaoImprimir from '@/app/components/BotaoImprimir'
-import { Candidatos } from '@prisma/client' // 2. Importado o tipo do Prisma
+import { Candidatos } from '@prisma/client'
 import {
-    User, FileText, Briefcase, MapPin, Phone, // 'Mail' foi removido
+    User, FileText, Briefcase, MapPin, Phone,
     Award, ChevronLeft, Clipboard, Instagram, Linkedin,
-    Facebook, CheckCircle, XCircle, Edit // Adicionado XCircle para o botão de rejeitar
+    Facebook, CheckCircle, XCircle, Edit, Clock, Plus
 } from 'lucide-react'
 
-import { Modal } from './Modal' // <-- Importe o Modal genérico
-import ModalObservacao from './ModalObservacao' // Importe o novo formulário
+import { Modal } from './Modal'
+import ModalObservacao from './ModalObservacao'
+import ModalAdicionarObservacao from './ModalAdicionarObservacao'
+import ObservacaoItem from './ObservacaoItem'
 
-// 3. Definido o tipo das props
 interface DetalhesCandidatoProps {
-    candidato: Candidatos;
+    candidato: Candidatos & {
+        observacaoUpdatedAt?: Date | string | null;
+    };
 }
+
+type ObservacaoHistorico = {
+  id: number;
+  observacao: string;
+  createdAt: string; // É uma boa prática tratar datas de JSON como string inicialmente
+  createdBy: string | null;
+  updatedAt: string;
+  updatedBy: string | null;
+  isDeleted: boolean;
+};
+
 
 export default function DetalhesCandidato({ candidato }: DetalhesCandidatoProps) {
     const router = useRouter()
     const [isPending, startTransition] = useTransition()
     const [statusAtualizando, setStatusAtualizando] = useState<'Aprovado' | 'Reprovado' | null>(null)
-    const [isModalOpen, setIsModalOpen] = useState(false) // <-- ADICIONADO: Estado para controlar o modal
+    const [isModalOpen, setIsModalOpen] = useState(false)
+    const [isModalAddOpen, setIsModalAddOpen] = useState(false)
+    const [historicoObservacoes, setHistoricoObservacoes] = useState<ObservacaoHistorico[]>([])
+    const [loadingHistorico, setLoadingHistorico] = useState(true)
 
+    const carregarHistorico = async () => {
+        try {
+            setLoadingHistorico(true)
+            const response = await fetch(`/api/candidatos/${candidato.idCandidato}/observacao/historico`)
+            if (response.ok) {
+                const data = await response.json()
+                setHistoricoObservacoes(data)
+            }
+        } catch (error) {
+            console.error('Erro ao carregar histórico:', error)
+        } finally {
+            setLoadingHistorico(false)
+        }
+    }
+
+    useEffect(() => {
+        carregarHistorico()
+    }, [candidato.idCandidato])
 
     const atualizarStatus = async (status: 'Aprovado' | 'Reprovado') => {
         setStatusAtualizando(status)
@@ -43,8 +78,19 @@ export default function DetalhesCandidato({ candidato }: DetalhesCandidatoProps)
 
     const formatarData = (data: Date | string | null | undefined): string => {
         if (!data) return '—'
-        // Adicionado timeZone para evitar problemas de fuso horário entre servidor e cliente
         return new Date(data).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+    }
+
+    const formatarDataHora = (data: Date | string | null | undefined): string => {
+        if (!data) return '—'
+        return new Date(data).toLocaleString('pt-BR', { 
+            timeZone: 'America/Sao_Paulo',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        })
     }
 
     return (
@@ -69,7 +115,6 @@ export default function DetalhesCandidato({ candidato }: DetalhesCandidatoProps)
                             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                                 <div className="relative w-16 h-16 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center border-2 border-blue-500">
                                     {candidato.fotoCandidato ? (
-                                        // 4. Substituído <img> por <Image>
                                         <Image
                                             src={candidato.fotoCandidato}
                                             alt={candidato.nomeCandidato || 'Foto do candidato'}
@@ -146,7 +191,6 @@ export default function DetalhesCandidato({ candidato }: DetalhesCandidatoProps)
                                                 href={`https://wa.me/55${candidato.telefoneCandidato.replace(/\D/g, '')}`}
                                                 target="_blank" rel="noopener noreferrer"
                                                 className="mt-2 inline-flex items-center gap-2 text-green-600 hover:text-green-700">
-                                                {/* 5. Substituído <img> por <Image> */}
                                                 <Image
                                                     src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg"
                                                     alt="WhatsApp"
@@ -197,23 +241,79 @@ export default function DetalhesCandidato({ candidato }: DetalhesCandidatoProps)
                                 <div className="mt-4"><p className="text-blue-500 text-sm font-medium">Outros Conhecimentos de Informática</p><p className="bg-blue-50 p-3 rounded-md mt-1">{candidato.conhecimentoinfcandidato || '—'}</p></div>
                             </section>
 
-                                                        <section className="mb-8">
+                            <section className="mb-8">
                                 <div className="flex justify-between items-center border-b border-yellow-200 pb-2 mb-4">
-                                    <h3 className="text-lg font-semibold text-yellow-800 flex items-center">
-                                        Observações Internas
-                                    </h3>
-                                    <button
-                                        onClick={() => setIsModalOpen(true)}
-                                        className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 font-medium p-1 rounded-md hover:bg-blue-50"
-                                    >
-                                        <Edit size={14} />
-                                        Editar
-                                    </button>
+                                    <div>
+                                        <h3 className="text-lg font-semibold text-yellow-800 flex items-center">
+                                            Observações Internas
+                                        </h3>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            {historicoObservacoes.length > 0 
+                                                ? `${historicoObservacoes.length} observação(ões) registrada(s)`
+                                                : 'Nenhuma observação registrada'}
+                                        </p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setIsModalAddOpen(true)}
+                                            className="flex items-center gap-1.5 text-sm text-green-600 hover:text-green-800 font-medium p-1 rounded-md hover:bg-green-50"
+                                            title="Adicionar nova observação"
+                                        >
+                                            <Plus size={16} />
+                                            Adicionar
+                                        </button>
+                                        <button
+                                            onClick={() => setIsModalOpen(true)}
+                                            className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 font-medium p-1 rounded-md hover:bg-blue-50"
+                                            title="Editar observação principal"
+                                        >
+                                            <Edit size={14} />
+                                            Editar Principal
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="bg-yellow-50 p-4 rounded-md border-l-4 border-yellow-500">
-                                    <p className="text-gray-700 whitespace-pre-wrap">
-                                        {candidato.observacaoCandidato || <span className="italic text-gray-500">Nenhuma observação adicionada.</span>}
-                                    </p>
+
+                                {/* Observação Principal (legado) */}
+                                {candidato.observacaoCandidato && (
+                                    <div className="mb-4">
+                                        <p className="text-sm font-medium text-gray-600 mb-2">Observação Principal:</p>
+                                        <div className="bg-blue-50 p-4 rounded-md border-l-4 border-blue-500">
+                                            <p className="text-gray-700 whitespace-pre-wrap">
+                                                {candidato.observacaoCandidato}
+                                            </p>
+                                            {candidato.observacaoUpdatedAt && (
+                                                <p className="text-xs text-gray-500 flex items-center mt-2">
+                                                    <Clock className="w-3 h-3 mr-1" />
+                                                    Última atualização: {formatarDataHora(candidato.observacaoUpdatedAt)}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Histórico de Observações */}
+                                <div className="space-y-3">
+                                    {loadingHistorico ? (
+                                        <div className="text-center py-4">
+                                            <p className="text-gray-500">Carregando observações...</p>
+                                        </div>
+                                    ) : historicoObservacoes.length > 0 ? (
+                                        historicoObservacoes.map((obs) => (
+                                            <ObservacaoItem
+                                                key={obs.id}
+                                                observacao={obs}
+                                                onUpdate={carregarHistorico}
+                                            />
+                                        ))
+                                    ) : (
+                                        !candidato.observacaoCandidato && (
+                                            <div className="bg-yellow-50 p-4 rounded-md border-l-4 border-yellow-500">
+                                                <p className="italic text-gray-500">
+                                                    Nenhuma observação adicionada. Clique em Adicionar para incluir uma observação.
+                                                </p>
+                                            </div>
+                                        )
+                                    )}
                                 </div>
                             </section>
 
@@ -251,15 +351,22 @@ export default function DetalhesCandidato({ candidato }: DetalhesCandidatoProps)
                     </div>
                 </div>
             </main>
-            {/* 2. ADICIONADO: Bloco que renderiza o Modal */}
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
                 <ModalObservacao
-                    candidatoId={candidato.idCandidato}
+                    candidatoId={Number(candidato.idCandidato)}
                     initialObservacao={candidato.observacaoCandidato}
                     onSuccess={() => setIsModalOpen(false)}
                 />
-
+            </Modal>
+            <Modal isOpen={isModalAddOpen} onClose={() => setIsModalAddOpen(false)}>
+                <ModalAdicionarObservacao
+                    candidatoId={Number(candidato.idCandidato)}
+                    onSuccess={() => {
+                        setIsModalAddOpen(false)
+                        carregarHistorico()
+                    }}
+                />
             </Modal>
         </>
     )
-}   
+}
