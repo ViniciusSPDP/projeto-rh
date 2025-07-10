@@ -10,6 +10,7 @@ import EtapaSelect from '@/app/components/EtapaSelect'
 import { BotaoFecharVaga } from '@/app/components/BotaoFecharVaga'
 import { BotaoEditarVaga } from '@/app/components/BotaoEditarVaga'
 import { BotaoExcluirVaga } from '@/app/components/BotaoExcluirVaga'
+import BotaoRemoverCandidato from '@/app/components/BotaoRemoverCandidato'
 
 
 async function getVaga(id: number) {
@@ -44,7 +45,7 @@ export default async function DetalheVagaPage({ params }: { params: { id: string
   if (!vaga) {
     return notFound()
   }
-  
+
   const publicUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/vagas/${vaga.idVaga}/formulario`
   const isVagaAberta = vaga.status === 'Aberta';
 
@@ -72,7 +73,7 @@ export default async function DetalheVagaPage({ params }: { params: { id: string
             </div>
           </div>
           <div className="flex items-center gap-3 mt-4 md:mt-0 self-start md:self-end">
-            
+
             {/* --- AQUI ESTÁ A CORREÇÃO --- */}
             {isVagaAberta ? (
               // Se a vaga está aberta, renderiza o Link funcional
@@ -99,14 +100,14 @@ export default async function DetalheVagaPage({ params }: { params: { id: string
             {isVagaAberta && <BotaoFecharVaga vagaId={vaga.idVaga} />}
           </div>
         </div>
-        {vaga.descricao && 
+        {vaga.descricao &&
           <div className="mt-6 border-t pt-4">
             <h2 className="font-semibold text-gray-700 mb-2">Descrição da Vaga</h2>
             <p className="text-gray-600 whitespace-pre-wrap">{vaga.descricao}</p>
           </div>
         }
       </header>
-      
+
       <div className="bg-white shadow-sm rounded-lg p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <div className="flex items-center gap-3">
@@ -130,16 +131,16 @@ export default async function DetalheVagaPage({ params }: { params: { id: string
         </div>
 
         {!isVagaAberta && (
-            <div className="mb-6 rounded-md bg-yellow-50 p-4 border border-yellow-200">
-                <div className="flex">
-                    <div className="flex-shrink-0">
-                        <ShieldAlert className="h-5 w-5 text-yellow-500" />
-                    </div>
-                    <div className="ml-3">
-                        <p className="text-sm font-medium text-yellow-800">Esta vaga está encerrada. Não é mais possível adicionar ou alterar etapas de candidatos.</p>
-                    </div>
-                </div>
+          <div className="mb-6 rounded-md bg-yellow-50 p-4 border border-yellow-200">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <ShieldAlert className="h-5 w-5 text-yellow-500" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-yellow-800">Esta vaga está encerrada. Não é mais possível adicionar ou alterar etapas de candidatos.</p>
+              </div>
             </div>
+          </div>
         )}
 
         {vaga.candidatos.length === 0 ? (
@@ -175,14 +176,15 @@ export default async function DetalheVagaPage({ params }: { params: { id: string
                         disabled={!isVagaAberta}
                       />
                     </div>
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0 flex items-center gap-2">
                       <Link
                         href={`/candidatos/${vc.candidatoId}`}
                         className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-indigo-600"
                       >
-                         <FileText size={16} />
-                         <span>Detalhes</span>
+                        <FileText size={16} />
+                        <span>Detalhes</span>
                       </Link>
+                      <BotaoRemoverCandidato vagaId={vaga.idVaga} vagaCandidatoId={vc.id} />
                     </div>
                   </div>
                 </li>

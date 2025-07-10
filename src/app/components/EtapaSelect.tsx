@@ -2,13 +2,13 @@
 
 import { useState, useTransition } from 'react'
 import {
-  CheckCircle,
-  CircleDashed,
+  MessageSquareQuote,
+  Search,
+  Users,
+  XCircle,
   FileText,
-  Frown,
+  Handshake,
   LoaderCircle,
-  Mic,
-  UserCheck,
   ChevronDown,
 } from 'lucide-react'
 
@@ -23,12 +23,12 @@ interface Props {
 
 // Estrutura de dados para as etapas, com ícones e cores associadas
 const ETAPAS_PROCESSO = [
-  { id: 'Em processo', label: 'Em processo', Icon: CircleDashed, color: 'text-gray-600', bgColor: 'bg-gray-100' },
-  { id: 'Entrevista', label: 'Entrevista', Icon: Mic, color: 'text-blue-600', bgColor: 'bg-blue-100' },
-  { id: 'Teste prático', label: 'Teste prático', Icon: FileText, color: 'text-purple-600', bgColor: 'bg-purple-100' },
-  { id: 'Finalista', label: 'Finalista', Icon: UserCheck, color: 'text-amber-600', bgColor: 'bg-amber-100' },
-  { id: 'Contratado', label: 'Contratado', Icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-100' },
-  { id: 'Reprovado', label: 'Reprovado', Icon: Frown, color: 'text-red-600', bgColor: 'bg-red-100' },
+  { id: 'Em recrutamento', label: 'Em recrutamento', Icon: Search, color: 'text-gray-600', bgColor: 'bg-gray-100' },
+  { id: 'Seleção', label: 'Seleção', Icon: FileText, color: 'text-purple-600', bgColor: 'bg-purple-100' },
+  { id: 'Entrevista', label: 'Entrevista', Icon: Users, color: 'text-blue-600', bgColor: 'bg-blue-100' },
+  { id: 'Feedback', label: 'Feedback', Icon: MessageSquareQuote, color: 'text-amber-600', bgColor: 'bg-amber-100' },
+  { id: 'Contratado', label: 'Contratado', Icon: Handshake, color: 'text-green-600', bgColor: 'bg-green-100' },
+  { id: 'Reprovado', label: 'Reprovado', Icon: XCircle, color: 'text-red-600', bgColor: 'bg-red-100' },
 ]
 
 export default function EtapaSelect({ vagaId, vagaCandidatoId, etapaAtual }: Props) {
