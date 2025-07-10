@@ -231,27 +231,6 @@ export default async function ImprimirCurriculoPage({ params }: ImprimirCurricul
                             </section>
                         )}
 
-                        {/* Seção para Observações Internas */}
-                        {(candidato.observacaoCandidato && candidato.observacaoCandidato.trim() !== '') || candidato.observacoesHistorico.length > 0 ? (
-                            <section>
-                                <h2 className="font-bold text-blue-800 flex items-center border-b border-gray-200 pb-1 mb-2">
-                                    <MessageSquare className="w-4 h-4 mr-1 text-blue-600" />
-                                    OBSERVAÇÕES INTERNAS
-                                </h2>
-                                <div className="text-sm space-y-2">
-                                    {candidato.observacaoCandidato && candidato.observacaoCandidato.trim() !== '' && (
-                                        <p>{candidato.observacaoCandidato}</p>
-                                    )}
-                                    {candidato.observacoesHistorico.length > 0 && (
-                                        <ul className="list-disc ml-5 space-y-1 text-gray-600 text-sm">
-                                            {candidato.observacoesHistorico.map((obs) => (
-                                                <li key={obs.id}>{obs.observacao}</li>
-                                            ))}
-                                        </ul>
-                                    )}
-                                </div>
-                            </section>
-                        ) : null}
                     </div>      
 
                     <div className="col-span-2">
@@ -309,6 +288,28 @@ export default async function ImprimirCurriculoPage({ params }: ImprimirCurricul
                         </div>
                     </div>
                 </div>
+
+                                        {/* Seção para Observações Internas */}
+                        {(candidato.observacaoCandidato && candidato.observacaoCandidato.trim() !== '') || candidato.observacoesHistorico.length > 0 ? (
+                            <section>
+                                <h2 className="font-bold text-blue-800 flex items-center border-b border-gray-200 pb-1 mb-2 mt-2">
+                                    <MessageSquare className="w-4 h-4 mr-1 text-blue-600" />
+                                    OBSERVAÇÕES INTERNAS
+                                </h2>
+                                <div className="text-sm space-y-2">
+                                    {candidato.observacaoCandidato && candidato.observacaoCandidato.trim() !== '' && (
+                                        <p>{candidato.observacaoCandidato}</p>
+                                    )}
+                                    {candidato.observacoesHistorico.length > 0 && (
+                                        <ul className="list-disc ml-5 space-y-1 text-gray-600 text-sm">
+                                            {candidato.observacoesHistorico.map((obs) => (
+                                                <li key={obs.id}>{obs.observacao}</li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
+                            </section>
+                        ) : null}
 
                 <footer className="mt-8 pt-2 border-t border-gray-300 text-center text-xs text-gray-500">
                     Currículo gerado em {new Date().toLocaleDateString('pt-BR')}
