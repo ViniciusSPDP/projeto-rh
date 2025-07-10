@@ -132,7 +132,7 @@ export default function ObservacaoItem({ observacao, onUpdate }: ObservacaoItemP
           <textarea
             value={editedText}
             onChange={(e) => setEditedText(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+            className="w-full p-2 border text-gray-700 border-gray-300 rounded-md focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
             rows={3}
           />
           <div className="flex gap-2 mt-2">

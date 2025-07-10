@@ -1,7 +1,8 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState, useTransition, useEffect } from 'react'
+import { useState, useTransition, useEffect, useCallback } from 'react'
+
 import Link from 'next/link'
 import Image from 'next/image'
 import BotaoImprimir from '@/app/components/BotaoImprimir'
@@ -24,13 +25,13 @@ interface DetalhesCandidatoProps {
 }
 
 type ObservacaoHistorico = {
-  id: number;
-  observacao: string;
-  createdAt: string; // É uma boa prática tratar datas de JSON como string inicialmente
-  createdBy: string | null;
-  updatedAt: string;
-  updatedBy: string | null;
-  isDeleted: boolean;
+    id: number;
+    observacao: string;
+    createdAt: string; // É uma boa prática tratar datas de JSON como string inicialmente
+    createdBy: string | null;
+    updatedAt: string;
+    updatedBy: string | null;
+    isDeleted: boolean;
 };
 
 
@@ -43,7 +44,7 @@ export default function DetalhesCandidato({ candidato }: DetalhesCandidatoProps)
     const [historicoObservacoes, setHistoricoObservacoes] = useState<ObservacaoHistorico[]>([])
     const [loadingHistorico, setLoadingHistorico] = useState(true)
 
-    const carregarHistorico = async () => {
+    const carregarHistorico = useCallback(async () => {
         try {
             setLoadingHistorico(true)
             const response = await fetch(`/api/candidatos/${candidato.idCandidato}/observacao/historico`)
@@ -56,11 +57,11 @@ export default function DetalhesCandidato({ candidato }: DetalhesCandidatoProps)
         } finally {
             setLoadingHistorico(false)
         }
-    }
+    }, [candidato.idCandidato])
 
     useEffect(() => {
         carregarHistorico()
-    }, [candidato.idCandidato])
+    }, [carregarHistorico])
 
     const atualizarStatus = async (status: 'Aprovado' | 'Reprovado') => {
         setStatusAtualizando(status)
@@ -83,7 +84,7 @@ export default function DetalhesCandidato({ candidato }: DetalhesCandidatoProps)
 
     const formatarDataHora = (data: Date | string | null | undefined): string => {
         if (!data) return '—'
-        return new Date(data).toLocaleString('pt-BR', { 
+        return new Date(data).toLocaleString('pt-BR', {
             timeZone: 'America/Sao_Paulo',
             day: '2-digit',
             month: '2-digit',
@@ -248,7 +249,7 @@ export default function DetalhesCandidato({ candidato }: DetalhesCandidatoProps)
                                             Observações Internas
                                         </h3>
                                         <p className="text-xs text-gray-500 mt-1">
-                                            {historicoObservacoes.length > 0 
+                                            {historicoObservacoes.length > 0
                                                 ? `${historicoObservacoes.length} observação(ões) registrada(s)`
                                                 : 'Nenhuma observação registrada'}
                                         </p>
