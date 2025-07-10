@@ -6,7 +6,7 @@ import {
     Briefcase, MapPin, Phone, Mail, Award,
     GraduationCap, Globe, Terminal, Check, Car, MessageSquare
 } from 'lucide-react'
-import { Candidatos } from '@prisma/client'
+import { Candidatos, ObservacaoHistorico } from '@prisma/client'
 
 interface ImprimirCurriculoPageProps {
     params: {
@@ -19,9 +19,15 @@ export default async function ImprimirCurriculoPage({ params }: ImprimirCurricul
 
     if (isNaN(id)) return notFound()
 
-    const candidato: Candidatos | null = await prisma.candidatos.findUnique({
+    const candidato = await prisma.candidatos.findUnique({
         where: { idCandidato: id },
-    })
+        include: {
+            observacoesHistorico: {
+                where: { isDeleted: false },
+                orderBy: { createdAt: 'desc' }
+            }
+        }
+    }) as (Candidatos & { observacoesHistorico: ObservacaoHistorico[] }) | null
 
     if (!candidato) return notFound()
 
@@ -225,19 +231,28 @@ export default async function ImprimirCurriculoPage({ params }: ImprimirCurricul
                             </section>
                         )}
 
-                        {/* Nova seção para Observações Internas */}
-                        {candidato.observacaoCandidato && candidato.observacaoCandidato.trim() !== '' && (
+                        {/* Seção para Observações Internas */}
+                        {(candidato.observacaoCandidato && candidato.observacaoCandidato.trim() !== '') || candidato.observacoesHistorico.length > 0 ? (
                             <section>
                                 <h2 className="font-bold text-blue-800 flex items-center border-b border-gray-200 pb-1 mb-2">
                                     <MessageSquare className="w-4 h-4 mr-1 text-blue-600" />
                                     OBSERVAÇÕES INTERNAS
                                 </h2>
-                                <div className="text-sm">
-                                    <p>{candidato.observacaoCandidato}</p>
+                                <div className="text-sm space-y-2">
+                                    {candidato.observacaoCandidato && candidato.observacaoCandidato.trim() !== '' && (
+                                        <p>{candidato.observacaoCandidato}</p>
+                                    )}
+                                    {candidato.observacoesHistorico.length > 0 && (
+                                        <ul className="list-disc ml-5 space-y-1 text-gray-600 text-sm">
+                                            {candidato.observacoesHistorico.map((obs) => (
+                                                <li key={obs.id}>{obs.observacao}</li>
+                                            ))}
+                                        </ul>
+                                    )}
                                 </div>
                             </section>
-                        )}
-                    </div>
+                        ) : null}
+                    </div>      
 
                     <div className="col-span-2">
                         <h2 className="font-bold text-blue-800 flex items-center border-b border-gray-200 pb-1 mb-4">
