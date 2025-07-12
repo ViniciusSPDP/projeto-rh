@@ -53,6 +53,7 @@ export default function Menu() {
     { id: 'candidatos', label: 'Candidatos', href: '/candidatos', icon: Users },
     { id: 'usuarios', label: 'Usuários', href: '/perfil/usuarios', icon: UserPlus },
     { id: 'processo-seletivo', label: 'Processo Seletivo', href: '/processo-seletivo', icon: UserPlus },
+    { id: 'integracoes', label: 'Integrações', href: '/integracoes', icon: UserPlus },
   ]
   
   const handleSignOut = async () => {

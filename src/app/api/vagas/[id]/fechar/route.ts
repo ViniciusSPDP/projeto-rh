@@ -86,7 +86,11 @@ export async function PATCH(req: NextRequest, context: Context) {
     // Enviar mensagens via WhatsApp (fora da transação para não bloquear)
     let resultadoEnvio = null;
     
+    console.log('Mensagens preparadas para envio:', resultado.mensagensPreparadas)
+    
     if (resultado.mensagensPreparadas.length > 0) {
+      console.log(`Iniciando envio de ${resultado.mensagensPreparadas.length} mensagens...`)
+      
       // Enviar mensagens em background
       enviarMensagensEmLote(resultado.mensagensPreparadas)
         .then(res => {
@@ -100,6 +104,8 @@ export async function PATCH(req: NextRequest, context: Context) {
         mensagensAgendadas: resultado.mensagensPreparadas.length,
         info: 'As mensagens estão sendo enviadas em segundo plano'
       };
+    } else {
+      console.log('Nenhuma mensagem para enviar - verifique se os candidatos têm telefone cadastrado')
     }
 
     return NextResponse.json({

@@ -102,13 +102,13 @@ export async function GET(req: NextRequest) {
     
     return NextResponse.json({
       whatsappConectado: conectado,
-      servicoDisponivel: conectado
+      servicoDisponivel: conectado,
     });
   } catch (error) {
     return NextResponse.json({
       whatsappConectado: false,
       servicoDisponivel: false,
-      erro: 'Não foi possível verificar o status'
+      erro: 'Não foi possível verificar o status' + error
     });
   }
 }

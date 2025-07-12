@@ -24,18 +24,30 @@ export default function WhatsAppIntegration() {
   const checkConnectionStatus = async () => {
     try {
       const response = await fetch('/api/integracoes/whatsapp/status')
-      if (response.ok) {
-        const data = await response.json()
-        setIsConnected(data.instance?.status === 'open')
-        setConnectionInfo(data)
-        
-        // Se estiver conectado, limpar o QR Code
-        if (data.instance?.status === 'open') {
-          setQrCode('')
-        }
+      const data = await response.json()
+      
+      console.log('Status recebido:', data)
+      
+      // Verificar diferentes possibilidades de resposta
+      const isOpen = data.instance?.status === 'open' || 
+                     data.instance?.state === 'open' ||
+                     data.instance?.connectionStatus === 'open'
+      
+      setIsConnected(isOpen)
+      setConnectionInfo(data)
+      
+      // Se estiver conectado, limpar o QR Code
+      if (isOpen) {
+        setQrCode('')
+      }
+      
+      // Mostrar dados brutos para debug (remover depois)
+      if (data.instance?.rawData) {
+        console.log('Dados brutos da API:', data.instance.rawData)
       }
     } catch (err) {
       console.error('Erro ao verificar status:', err)
+      setIsConnected(false)
     }
   }
 
@@ -92,7 +104,7 @@ export default function WhatsAppIntegration() {
         setConnectionInfo(null)
       }
     } catch (err) {
-      setError('Erro ao desconectar WhatsApp ' + err)
+      setError('Erro ao desconectar' + err  )
     } finally {
       setIsLoading(false)
     }
