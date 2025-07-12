@@ -1,0 +1,15 @@
+{
+  "templates": {
+    "CONTRATADO": {
+      "tipo": "CONTRATADO",
+      "titulo": "Mensagem para Candidatos Contratados",
+      "mensagem": "Parabéns, {{nomeCandidato}} !\n\nTemos o prazer de informar que você foi APROVADO(A) no processo seletivo para a vaga de {{titulo}}.\n\nEntraremos em contato em breve com os próximos passos.\n\nAtenciosamente,\nEquipe de RH"
+    },
+    "REPROVADO": {
+      "tipo": "REPROVADO",
+      "titulo": "Mensagem para Candidatos Não Selecionados",
+      "mensagem": "Olá {{nomeCandidato}},\n\nAgradecemos sua participação no processo seletivo para a vaga de {{titulo}}.\n\nApós cuidadosa análise, decidimos seguir com outros candidatos. Manteremos seu currículo em nosso banco de talentos.\n\nDesejamos sucesso em sua jornada!\n\nAtenciosamente,\nEquipe de RH"
+    }
+  },
+  "delayEntreEnvios": 12000
+}

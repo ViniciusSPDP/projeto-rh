@@ -1,7 +1,8 @@
 // app/integracoes/page.tsx
 
-import { Smartphone, WifiOff } from 'lucide-react'
-import WhatsAppIntegration from './WhatsAppIntegration'
+import { Smartphone, WifiOff, Settings } from 'lucide-react'; // 1. Ícone Settings importado
+import Link from 'next/link'; // 2. Componente Link importado
+import WhatsAppIntegration from './WhatsAppIntegration';
 
 export default function IntegracoesPage() {
   return (
@@ -29,6 +30,11 @@ export default function IntegracoesPage() {
                   <p className="text-sm text-gray-500">Evolution API</p>
                 </div>
               </div>
+              
+              {/* 3. Ícone de engrenagem com link adicionado aqui */}
+              <Link href="/integracoes/whatsapp/templates-whatsapp">
+                <Settings className="h-6 w-6 cursor-pointer text-gray-400 transition-colors hover:text-gray-600" />
+              </Link>
             </div>
             
             <p className="mb-4 text-sm text-gray-600">
@@ -57,5 +63,5 @@ export default function IntegracoesPage() {
         </div>
       </div>
     </main>
-  )
+  );
 }

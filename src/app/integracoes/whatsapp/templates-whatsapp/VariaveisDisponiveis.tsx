@@ -17,7 +17,8 @@ interface GrupoVariaveis {
   variaveis: Variavel[]
 }
 
-const gruposVariaveis: GrupoVariaveis[] = {
+// CORREÇÃO: Definir como um Record (objeto) em vez de array
+const gruposVariaveis: Record<string, GrupoVariaveis> = {
   candidato: {
     titulo: 'Dados do Candidato',
     icone: '👤',
@@ -27,7 +28,6 @@ const gruposVariaveis: GrupoVariaveis[] = {
       { nome: 'rgCandidato', descricao: 'RG do candidato', exemplo: '12.345.678-9' },
       { nome: 'emailCandidato', descricao: 'E-mail do candidato', exemplo: 'joao.silva@email.com' },
       { nome: 'telefoneCandidato', descricao: 'Telefone principal', exemplo: '(11) 98765-4321' },
-      { nome: 'telefone2Candidato', descricao: 'Telefone secundário', exemplo: '(11) 3456-7890' },
       { nome: 'datanascimentoCandidato', descricao: 'Data de nascimento', exemplo: '01/01/1990' },
       { nome: 'sexoCandidato', descricao: 'Sexo do candidato', exemplo: 'Masculino' },
       { nome: 'estadocivilCandidato', descricao: 'Estado civil', exemplo: 'Solteiro' },

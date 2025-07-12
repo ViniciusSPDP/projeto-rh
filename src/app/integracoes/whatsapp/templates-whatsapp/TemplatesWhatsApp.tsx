@@ -179,7 +179,7 @@ export default function TemplatesWhatsApp() {
                 value={config.templates[selectedTemplate].mensagem}
                 onChange={(e) => updateTemplate(selectedTemplate, e.target.value)}
                 rows={12}
-                className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full text-gray-600 rounded-lg border border-gray-300 p-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 placeholder="Digite a mensagem..."
               />
               <p className="mt-2 text-xs text-gray-500">
@@ -229,7 +229,7 @@ export default function TemplatesWhatsApp() {
                 step="500"
                 value={config.delayEntreEnvios}
                 onChange={(e) => updateDelay(Number(e.target.value))}
-                className="w-32 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-32 text-gray-700 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
               <span className="text-sm text-gray-600">
                 ({(config.delayEntreEnvios / 1000).toFixed(1)} segundos)

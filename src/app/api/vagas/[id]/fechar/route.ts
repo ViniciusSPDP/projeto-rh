@@ -1,4 +1,4 @@
-// app/api/vagas/[id]/encerrar/route.ts
+// src/app/api/vagas/[id]/fechar/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
@@ -9,6 +9,44 @@ interface Context {
     id: string;
   };
 }
+
+// SOLUÇÃO 1: Definir o tipo das mensagens
+type TipoMensagem = 'CONTRATADO' | 'REPROVADO';
+
+interface MensagemWhatsApp {
+  numero: string;
+  tipo: TipoMensagem;
+  variaveis: {
+    titulo: string;
+    status: string;
+    etapa: string;
+    nomeCandidato: string;
+    emailCandidato: string;
+    cpfCandidato: string;
+    telefoneCandidato: string;
+    datanascimentoCandidato: string;
+    rgCandidato: string;
+    sexoCandidato: string;
+    estadocivilCandidato: string;
+    escolaridadeCandidato: string;
+    situacaoCandidato: string;
+    cepCandidato: string;
+    ruaCandidato: string;
+    numeroCandidato: string;
+    bairroCandidato: string;
+    cidadeCandidato: string;
+    estadoCandidato: string;
+    empresaCandidato: string;
+    empresa2Candidato: string;
+    empresa3Candidato: string;
+  };
+}
+
+// Função auxiliar para formatar datas
+const formatDate = (date: Date | null | undefined): string => {
+  if (!date) return '';
+  return new Date(date).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+};
 
 export async function PATCH(req: NextRequest, context: Context) {
   const vagaId = Number(context.params.id);
@@ -22,35 +60,31 @@ export async function PATCH(req: NextRequest, context: Context) {
       // Buscar dados da vaga
       const vaga = await tx.vaga.findUnique({
         where: { idVaga: vagaId },
-        select: { titulo: true }
+        select: { idVaga: true, titulo: true, descricao: true, status: true }
       });
 
       if (!vaga) {
         throw new Error('Vaga não encontrada');
       }
 
-      // Buscar candidatos com seus dados de contato
       const candidatosDaVaga = await tx.vagaCandidato.findMany({
         where: { vagaId: vagaId },
         include: {
-          candidato: {
-            select: {
-              nomeCandidato: true,
-              telefoneCandidato: true,
-              emailCandidato: true
-            }
-          }
+          candidato: true
         }
       });
 
-      // Preparar mensagens para envio
-      const mensagensParaEnviar = [];
+      // SOLUÇÃO 2: Tipar o array corretamente
+      const mensagensParaEnviar: MensagemWhatsApp[] = [];
 
       // Atualizar situação dos candidatos
       for (const vagaCandidato of candidatosDaVaga) {
         const novaSituacao = vagaCandidato.etapa === 'Contratado' ? 'Contratado' : 'Reprovado';
+        // SOLUÇÃO 3: Usar type assertion ou definir explicitamente o tipo
+        const tipoMensagem: TipoMensagem = novaSituacao === 'Contratado' ? 'CONTRATADO' : 'REPROVADO';
 
-        await tx.candidatos.update({ 
+        // Atualiza a situação do candidato no banco de talentos geral
+        await tx.candidatos.update({
           where: {
             idCandidato: vagaCandidato.candidatoId,
           },
@@ -59,23 +93,55 @@ export async function PATCH(req: NextRequest, context: Context) {
           },
         });
 
-        // Preparar mensagem se o candidato tiver telefone
-        if (vagaCandidato.candidato?.telefoneCandidato && vagaCandidato.candidato?.nomeCandidato) {
+        const { candidato } = vagaCandidato;
+
+        if (candidato?.telefoneCandidato && candidato?.nomeCandidato) {
           mensagensParaEnviar.push({
-            numero: vagaCandidato.candidato.telefoneCandidato,
-            nome: vagaCandidato.candidato.nomeCandidato,
-            vaga: vaga.titulo,
-            tipo: novaSituacao === 'Contratado' ? 'CONTRATADO' : 'REPROVADO' as const
+            numero: candidato.telefoneCandidato,
+            tipo: tipoMensagem, // Agora está tipado corretamente
+            variaveis: {
+              // Dados da Vaga
+              titulo: vaga.titulo || '',
+              status: 'Encerrada',
+
+              // Dados do Processo
+              etapa: vagaCandidato.etapa || '',
+
+              // Dados do Candidato
+              nomeCandidato: candidato.nomeCandidato || '',
+              emailCandidato: candidato.emailCandidato || '',
+              cpfCandidato: candidato.cpfCandidato || '',
+              telefoneCandidato: candidato.telefoneCandidato || '',
+              datanascimentoCandidato: formatDate(candidato.datanascimentoCandidato) || '',
+              rgCandidato: candidato.rgCandidato || '',
+              sexoCandidato: candidato.sexoCandidato || '',
+              estadocivilCandidato: candidato.estadocivilCandidato || '',
+              escolaridadeCandidato: candidato.escolaridadeCandidato || '',
+              situacaoCandidato: novaSituacao,
+
+              // Endereço do Candidato
+              cepCandidato: candidato.cepCandidato || '',
+              ruaCandidato: candidato.ruaCandidato || '',
+              numeroCandidato: candidato.numeroCandidato || '',
+              bairroCandidato: candidato.bairroCandidato || '',
+              cidadeCandidato: candidato.cidadeCandidato || '',
+              estadoCandidato: candidato.estadoCandidato || '',
+
+              // Experiência Profissional
+              empresaCandidato: candidato.empresaCandidato || '',
+              empresa2Candidato: candidato.empresa2Candidato || '',
+              empresa3Candidato: candidato.empresa3Candidato || '',
+            }
           });
         }
       }
 
-      // Atualizar status da vaga
+      // Atualizar status da vaga para "Encerrada"
       const vagaAtualizada = await tx.vaga.update({
         where: { idVaga: vagaId },
         data: { status: 'Encerrada' },
       });
-      
+
       return {
         vaga: vagaAtualizada,
         candidatos: candidatosDaVaga.length,
@@ -83,40 +149,28 @@ export async function PATCH(req: NextRequest, context: Context) {
       };
     });
 
-    // Enviar mensagens via WhatsApp (fora da transação para não bloquear)
-    let resultadoEnvio = null;
-    
-    console.log('Mensagens preparadas para envio:', resultado.mensagensPreparadas)
-    
+    // Enviar mensagens via WhatsApp (fora da transação)
     if (resultado.mensagensPreparadas.length > 0) {
-      console.log(`Iniciando envio de ${resultado.mensagensPreparadas.length} mensagens...`)
-      
-      // Enviar mensagens em background
+      console.log(`Disparando envio de ${resultado.mensagensPreparadas.length} mensagens em segundo plano...`);
+
+      // Agora não deve dar erro TypeScript
       enviarMensagensEmLote(resultado.mensagensPreparadas)
-        .then(res => {
-          console.log('Resultado do envio de mensagens:', res);
-        })
-        .catch(err => {
-          console.error('Erro ao enviar mensagens:', err);
-        });
-      
-      resultadoEnvio = {
-        mensagensAgendadas: resultado.mensagensPreparadas.length,
-        info: 'As mensagens estão sendo enviadas em segundo plano'
-      };
-    } else {
-      console.log('Nenhuma mensagem para enviar - verifique se os candidatos têm telefone cadastrado')
+        .then(res => console.log('Resultado do envio em lote (background):', res))
+        .catch(err => console.error('Erro no envio em lote (background):', err));
     }
 
     return NextResponse.json({
       vaga: resultado.vaga,
       candidatosAtualizados: resultado.candidatos,
-      whatsapp: resultadoEnvio
+      whatsapp: {
+        info: 'O processo de encerramento foi concluído e as notificações estão sendo enviadas.',
+        mensagensAgendadas: resultado.mensagensPreparadas.length
+      }
     });
 
   } catch (error) {
     console.error('Erro ao encerrar vaga:', error);
-    
+
     if (error instanceof Error && error.message.includes('Vaga não encontrada')) {
       return NextResponse.json({ error: 'Vaga não encontrada' }, { status: 404 });
     }

@@ -24,8 +24,7 @@ export async function GET() {
     try {
       const data = await fs.readFile(CONFIG_FILE, 'utf-8')
       return NextResponse.json({ config: JSON.parse(data) })
-    } catch (error) {
-      // Se o arquivo não existe, retorna configuração padrão
+    } catch {
       return NextResponse.json({ config: null }, { status: 404 })
     }
   } catch (error) {
