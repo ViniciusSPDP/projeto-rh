@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { enviarMensagensEmLote } from '@/lib/whatsapp-service';
+import { getWhatsAppConfig } from '@/lib/whatsappConfig'; // NOVO: 1. Importar a função de configuração
 
 interface Context {
   params: {
@@ -10,7 +11,6 @@ interface Context {
   };
 }
 
-// SOLUÇÃO 1: Definir o tipo das mensagens
 type TipoMensagem = 'CONTRATADO' | 'REPROVADO';
 
 interface MensagemWhatsApp {
@@ -42,7 +42,6 @@ interface MensagemWhatsApp {
   };
 }
 
-// Função auxiliar para formatar datas
 const formatDate = (date: Date | null | undefined): string => {
   if (!date) return '';
   return new Date(date).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
@@ -56,8 +55,10 @@ export async function PATCH(req: NextRequest, context: Context) {
   }
 
   try {
+    // NOVO: 2. Obter a configuração do WhatsApp no início
+    const whatsAppConfig = await getWhatsAppConfig();
+
     const resultado = await prisma.$transaction(async (tx) => {
-      // Buscar dados da vaga
       const vaga = await tx.vaga.findUnique({
         where: { idVaga: vagaId },
         select: { idVaga: true, titulo: true, descricao: true, status: true }
@@ -74,16 +75,12 @@ export async function PATCH(req: NextRequest, context: Context) {
         }
       });
 
-      // SOLUÇÃO 2: Tipar o array corretamente
       const mensagensParaEnviar: MensagemWhatsApp[] = [];
 
-      // Atualizar situação dos candidatos
       for (const vagaCandidato of candidatosDaVaga) {
         const novaSituacao = vagaCandidato.etapa === 'Contratado' ? 'Contratado' : 'Reprovado';
-        // SOLUÇÃO 3: Usar type assertion ou definir explicitamente o tipo
         const tipoMensagem: TipoMensagem = novaSituacao === 'Contratado' ? 'CONTRATADO' : 'REPROVADO';
 
-        // Atualiza a situação do candidato no banco de talentos geral
         await tx.candidatos.update({
           where: {
             idCandidato: vagaCandidato.candidatoId,
@@ -98,16 +95,11 @@ export async function PATCH(req: NextRequest, context: Context) {
         if (candidato?.telefoneCandidato && candidato?.nomeCandidato) {
           mensagensParaEnviar.push({
             numero: candidato.telefoneCandidato,
-            tipo: tipoMensagem, // Agora está tipado corretamente
+            tipo: tipoMensagem,
             variaveis: {
-              // Dados da Vaga
               titulo: vaga.titulo || '',
               status: 'Encerrada',
-
-              // Dados do Processo
               etapa: vagaCandidato.etapa || '',
-
-              // Dados do Candidato
               nomeCandidato: candidato.nomeCandidato || '',
               emailCandidato: candidato.emailCandidato || '',
               cpfCandidato: candidato.cpfCandidato || '',
@@ -118,16 +110,12 @@ export async function PATCH(req: NextRequest, context: Context) {
               estadocivilCandidato: candidato.estadocivilCandidato || '',
               escolaridadeCandidato: candidato.escolaridadeCandidato || '',
               situacaoCandidato: novaSituacao,
-
-              // Endereço do Candidato
               cepCandidato: candidato.cepCandidato || '',
               ruaCandidato: candidato.ruaCandidato || '',
               numeroCandidato: candidato.numeroCandidato || '',
               bairroCandidato: candidato.bairroCandidato || '',
               cidadeCandidato: candidato.cidadeCandidato || '',
               estadoCandidato: candidato.estadoCandidato || '',
-
-              // Experiência Profissional
               empresaCandidato: candidato.empresaCandidato || '',
               empresa2Candidato: candidato.empresa2Candidato || '',
               empresa3Candidato: candidato.empresa3Candidato || '',
@@ -136,7 +124,6 @@ export async function PATCH(req: NextRequest, context: Context) {
         }
       }
 
-      // Atualizar status da vaga para "Encerrada"
       const vagaAtualizada = await tx.vaga.update({
         where: { idVaga: vagaId },
         data: { status: 'Encerrada' },
@@ -149,32 +136,42 @@ export async function PATCH(req: NextRequest, context: Context) {
       };
     });
 
-    // Enviar mensagens via WhatsApp (fora da transação)
-    if (resultado.mensagensPreparadas.length > 0) {
-      console.log(`Disparando envio de ${resultado.mensagensPreparadas.length} mensagens em segundo plano...`);
+    let whatsappStatus = {
+      info: 'Disparo automático desativado. Nenhuma mensagem foi enviada.',
+      mensagensAgendadas: 0
+    };
 
-      // Agora não deve dar erro TypeScript
+    // NOVO: 3. Adicionar verificação antes de enviar as mensagens
+    if (whatsAppConfig.disparoAutomatico && resultado.mensagensPreparadas.length > 0) {
+      console.log(`Disparo automático ATIVADO. Enviando ${resultado.mensagensPreparadas.length} mensagens...`);
+      
+      // A chamada para enviar as mensagens agora fica dentro da condição
       enviarMensagensEmLote(resultado.mensagensPreparadas)
         .then(res => console.log('Resultado do envio em lote (background):', res))
         .catch(err => console.error('Erro no envio em lote (background):', err));
+
+      whatsappStatus = {
+        info: 'O processo de encerramento foi concluído e as notificações estão sendo enviadas.',
+        mensagensAgendadas: resultado.mensagensPreparadas.length
+      };
+    } else if (!whatsAppConfig.disparoAutomatico) {
+      console.log('Disparo automático DESATIVADO. As mensagens foram preparadas mas não serão enviadas.');
+    } else {
+       console.log('Nenhuma mensagem a ser enviada.');
+       whatsappStatus.info = 'Nenhum candidato com telefone válido para notificar.'
     }
 
     return NextResponse.json({
       vaga: resultado.vaga,
       candidatosAtualizados: resultado.candidatos,
-      whatsapp: {
-        info: 'O processo de encerramento foi concluído e as notificações estão sendo enviadas.',
-        mensagensAgendadas: resultado.mensagensPreparadas.length
-      }
+      whatsapp: whatsappStatus // Resposta dinâmica baseada na configuração
     });
 
   } catch (error) {
     console.error('Erro ao encerrar vaga:', error);
-
     if (error instanceof Error && error.message.includes('Vaga não encontrada')) {
       return NextResponse.json({ error: 'Vaga não encontrada' }, { status: 404 });
     }
-
     return NextResponse.json(
       { error: 'Erro interno do servidor ao tentar encerrar a vaga.' },
       { status: 500 }

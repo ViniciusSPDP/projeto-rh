@@ -11,5 +11,6 @@
       "mensagem": "Olá {{nomeCandidato}},\n\nAgradecemos sua participação no processo seletivo para a vaga de {{titulo}}.\n\nApós cuidadosa análise, decidimos seguir com outros candidatos. Manteremos seu currículo em nosso banco de talentos.\n\nDesejamos sucesso em sua jornada!\n\nAtenciosamente,\nEquipe de RH"
     }
   },
-  "delayEntreEnvios": 12000
+  "delayEntreEnvios": 12000,
+  "disparoAutomatico": true
 }

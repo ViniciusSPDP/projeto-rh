@@ -1,0 +1,26 @@
+{
+  "disparoPorEtapaAtivado": true,
+  "templatesPorEtapa": {
+    "Em Recrutamento": {
+      "ativo": true,
+      "mensagem": "Em Recrutamento\nVAMOS ENVIAR UM TESTE"
+    },
+    "Feedback": {
+      "ativo": true,
+      "mensagem": "Feedback\nVAMOS ENVIAR UM TESTE"
+    },
+    "Entrevista": {
+      "ativo": true,
+      "mensagem": "Entrevista\nVAMOS ENVIAR UM TESTE"
+    },
+    "Seleção": {
+      "ativo": true,
+      "mensagem": "Em Seleção\nVAMOS ENVIAR UM TESTE"
+    },
+    "Em recrutamento": {
+      "ativo": true,
+      "mensagem": "Em recrutamento\nVAMOS ENVIAR UM TESTE"
+    }
+  },
+  "delayEntreEnvios": 30000
+}

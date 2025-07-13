@@ -1,0 +1,12 @@
+{
+  "disparoAutomatico": true,
+  "templates": {
+    "CONTRATADO": {
+      "mensagem": ""
+    },
+    "REPROVADO": {
+      "mensagem": ""
+    }
+  },
+  "delayEntreEnvios": 2000
+}

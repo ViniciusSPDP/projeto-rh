@@ -32,7 +32,7 @@ export default function IntegracoesPage() {
               </div>
               
               {/* 3. Ícone de engrenagem com link adicionado aqui */}
-              <Link href="/integracoes/whatsapp/templates-whatsapp">
+              <Link href="/integracoes/whatsapp">
                 <Settings className="h-6 w-6 cursor-pointer text-gray-400 transition-colors hover:text-gray-600" />
               </Link>
             </div>
