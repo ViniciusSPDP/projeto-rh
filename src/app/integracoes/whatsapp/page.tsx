@@ -150,7 +150,7 @@ export default function WhatsAppConfigPage() {
                 <div className="flex items-start gap-4">
                   <ZapOff className="mt-1 h-6 w-6 text-gray-400" />
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-800">Notificações de Fim de Vaga</h3>
+                    <h3 className="text-lg font-semibold text-gray-800">Mensagem de Fim de Vaga</h3>
                     <p className="mt-1 text-sm text-gray-600">Envia mensagens para aprovados e reprovados ao encerrar uma vaga.</p>
                   </div>
                 </div>
@@ -176,7 +176,7 @@ export default function WhatsAppConfigPage() {
                 <div className="flex items-start gap-4">
                   <Workflow className="mt-1 h-6 w-6 text-gray-400" />
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-800">Notificações por Etapa</h3>
+                    <h3 className="text-lg font-semibold text-gray-800">Mensagem por Etapa</h3>
                     <p className="mt-1 text-sm text-gray-600">Envia uma mensagem ao candidato sempre que ele avança no processo seletivo.</p>
                   </div>
                 </div>
