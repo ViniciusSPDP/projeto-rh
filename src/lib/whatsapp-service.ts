@@ -1,49 +1,16 @@
 // lib/whatsapp-service.ts
 
 import { evolutionFetch, EVOLUTION_API } from './evolution-api';
-import { promises as fs } from 'fs';
-import path from 'path';
+// O tipo WhatsAppConfig agora será usado, corrigindo o aviso.
+import { getWhatsAppConfig, type WhatsAppConfig } from './whatsappConfig';
 
-const CONFIG_FILE = path.join(process.cwd(), 'data', 'whatsapp-config.json');
+// A interface 'Template' foi removida, pois o tipo já existe dentro de 'WhatsAppConfig'.
 
-interface Template {
-  tipo: 'CONTRATADO' | 'REPROVADO';
-  titulo: string;
-  mensagem: string;
-}
-
-interface EvolutionInstance {
-  instance?: {
-    instanceName?: string;
-    state?: string;
-    connectionStatus?: string;
-  };
-}
-
-interface ConfigWhatsApp {
-  templates: {
-    CONTRATADO: Template;
-    REPROVADO: Template;
-  };
-  delayEntreEnvios: number;
-}
-
-// Definindo tipos para os erros da API
 interface ApiError {
   response?: {
     data?: unknown;
   };
   message?: string;
-}
-
-async function getWhatsAppConfig(): Promise<ConfigWhatsApp | null> {
-  try {
-    const data = await fs.readFile(CONFIG_FILE, 'utf-8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('ERRO: Não foi possível carregar o arquivo de configuração de templates (whatsapp-config.json).', error);
-    return null;
-  }
 }
 
 interface EnviarMensagemParams {
@@ -54,18 +21,14 @@ interface EnviarMensagemParams {
 
 function formatarNumero(numero: string): string {
   const numeroLimpo = numero.replace(/\D/g, '');
-  if (numeroLimpo.startsWith('55') && numeroLimpo.length >= 12) {
-    return numeroLimpo;
-  }
-  return `55${numeroLimpo}`;
+  return numeroLimpo.startsWith('55') && numeroLimpo.length >= 12 ? numeroLimpo : `55${numeroLimpo}`;
 }
 
 function substituirVariaveis(texto: string, variaveis: Record<string, string>): string {
-  let textoFinal = texto;
-  Object.entries(variaveis).forEach(([chave, valor]) => {
-    textoFinal = textoFinal.replace(new RegExp(`{{${chave}}}`, 'g'), valor || '');
-  });
-  return textoFinal;
+  return Object.entries(variaveis).reduce(
+    (acc, [chave, valor]) => acc.replace(new RegExp(`{{${chave}}}`, 'g'), valor || ''),
+    texto
+  );
 }
 
 export async function enviarMensagemWhatsApp({
@@ -73,16 +36,13 @@ export async function enviarMensagemWhatsApp({
   tipo,
   variaveis
 }: EnviarMensagemParams): Promise<boolean> {
-  const config = await getWhatsAppConfig();
-  if (!config) {
-    console.error(`Envio para ${numero} falhou: arquivo de configuração não encontrado.`);
-    return false;
-  }
+  // CORREÇÃO APLICADA AQUI: Adicionando a tipagem explícita
+  const config: WhatsAppConfig = await getWhatsAppConfig();
 
   try {
     const template = config.templates[tipo];
-    if (!template) {
-      console.error(`Template para o tipo "${tipo}" não encontrado na configuração.`);
+    if (!template || !template.mensagem) {
+      console.error(`Template para o tipo "${tipo}" não encontrado ou está vazio.`);
       return false;
     }
 
@@ -94,69 +54,41 @@ export async function enviarMensagemWhatsApp({
     const payload = {
       number: numeroFormatado,
       options: { delay: 1200, presence: 'composing' },
-      text: mensagem 
+      text: mensagem,
     };
 
-    console.log('Payload de envio:', JSON.stringify(payload, null, 2));
-
-    const response = await evolutionFetch(`/message/sendText/${EVOLUTION_API.instanceName}`, {
+    await evolutionFetch(`/message/sendText/${EVOLUTION_API.instanceName}`, {
       method: 'POST',
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
 
     console.log(`Mensagem enviada com sucesso para ${nomeCandidato} (${numeroFormatado})`);
-    console.log('Resposta:', response);
     return true;
   } catch (error) {
     console.error(`Erro ao enviar mensagem para ${variaveis.nomeCandidato}:`, error);
-    if (error instanceof Error) {
-      console.error('Detalhes do erro:', error.message);
-    }
     return false;
   }
 }
 
-// ==========================================================================================
-// --- FUNÇÃO NOVA ADICIONADA AQUI ---
-// Esta função é para a nova funcionalidade de notificação por etapa.
-// Ela é mais simples pois não depende de templates do arquivo JSON.
-// ==========================================================================================
-/**
- * Envia uma única mensagem de texto simples para um número.
- * @param numero O número do destinatário (ex: "5511999998888")
- * @param mensagem O texto já personalizado a ser enviado.
- */
 export async function enviarMensagemSimples(numero: string, mensagem: string) {
   try {
-    const numeroFormatado = formatarNumero(numero); // Reutilizando sua função de formatação
-
+    const numeroFormatado = formatarNumero(numero);
     const payload = {
       number: numeroFormatado,
-      options: {
-        delay: 1200,
-        presence: 'composing',
-      },
+      options: { delay: 1200, presence: 'composing' },
       text: mensagem,
     };
 
-    // Usando a mesma função de envio da sua outra função
-    const response = await evolutionFetch(
-      `/message/sendText/${EVOLUTION_API.instanceName}`,
-      {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      }
-    );
+    const response = await evolutionFetch(`/message/sendText/${EVOLUTION_API.instanceName}`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
 
     console.log(`Mensagem SIMPLES enviada com sucesso para ${numeroFormatado}`);
     return response;
   } catch (error) {
-    // Verificando se é um erro com response (tipo ApiError)
     const apiError = error as ApiError;
-    
-    // Tratamento mais específico do erro
     const errorMessage = apiError.response?.data || apiError.message || 'Erro desconhecido';
-    
     console.error(`ERRO ao enviar mensagem SIMPLES para ${numero}:`, errorMessage);
     throw new Error('Falha ao enviar mensagem simples via Evolution API');
   }
@@ -164,28 +96,9 @@ export async function enviarMensagemSimples(numero: string, mensagem: string) {
 
 export async function verificarConexaoWhatsApp(): Promise<boolean> {
   try {
-    try {
-      const fetchResponse = await fetch(`${EVOLUTION_API.baseUrl}/instance/fetchInstances`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API.apiKey }
-      });
-
-      if (fetchResponse.ok) {
-        const instances: EvolutionInstance[] = await fetchResponse.json();
-        const nossaInstancia = instances.find((inst: EvolutionInstance) => inst.instance?.instanceName === EVOLUTION_API.instanceName);
-        if (nossaInstancia) {
-          const isConnected = nossaInstancia.instance?.state === 'open' || nossaInstancia.instance?.connectionStatus === 'open';
-          console.log(`WhatsApp conexão status (fetchInstances): ${isConnected ? 'Conectado' : 'Desconectado'}`);
-          return isConnected;
-        }
-      }
-    } catch {
-      console.log('fetchInstances falhou, tentando connectionState...');
-    }
-
     const status = await evolutionFetch(`/instance/connectionState/${EVOLUTION_API.instanceName}`);
-    const isConnected = status.state === 'open' || status.status === 'open' || status.instance?.state === 'open' || status.instance?.status === 'open';
-    console.log(`WhatsApp conexão status (connectionState): ${isConnected ? 'Conectado' : 'Desconectado'}`);
+    const isConnected = status.instance.state === 'open';
+    console.log(`WhatsApp conexão status: ${isConnected ? 'Conectado' : 'Desconectado'}`);
     return isConnected;
   } catch (error) {
     console.error('Erro ao verificar conexão WhatsApp:', error);
@@ -200,35 +113,34 @@ export async function enviarMensagensEmLote(
   falha: number;
   detalhes: Array<{ candidato: string; enviado: boolean }>;
 }> {
-  console.log('ESTRUTURA RECEBIDA PELO SERVIÇO:', JSON.stringify(mensagens, null, 2));
-  const config = await getWhatsAppConfig();
-  const delayEntreEnvios = config?.delayEntreEnvios || 2000;
+  // CORREÇÃO APLICADA AQUI: Adicionando a tipagem explícita
+  const config: WhatsAppConfig = await getWhatsAppConfig();
+  const delayEntreEnvios = config.delayEntreEnvios || 2000;
   console.log(`Iniciando envio em lote de ${mensagens.length} mensagens com delay de ${delayEntreEnvios}ms`);
 
   const resultados = {
     sucesso: 0,
     falha: 0,
-    detalhes: [] as Array<{ candidato: string; enviado: boolean }>
+    detalhes: [] as Array<{ candidato: string; enviado: boolean }>,
   };
 
   const conectado = await verificarConexaoWhatsApp();
   if (!conectado) {
-    console.error('WhatsApp não está conectado - abortando envio');
-    mensagens.forEach(msg => {
-      resultados.falha++;
-      resultados.detalhes.push({ candidato: msg.variaveis.nomeCandidato || 'Desconhecido', enviado: false });
-    });
+    console.error('WhatsApp não está conectado - abortando envio em lote.');
+    resultados.falha = mensagens.length;
+    resultados.detalhes = mensagens.map(msg => ({
+      candidato: msg.variaveis.nomeCandidato || 'Desconhecido',
+      enviado: false,
+    }));
     return resultados;
   }
 
   console.log('WhatsApp conectado! Iniciando envios...');
-
-  for (let i = 0; i < mensagens.length; i++) {
-    const mensagem = mensagens[i];
+  for (const [index, mensagem] of mensagens.entries()) {
     const nomeCandidato = mensagem.variaveis.nomeCandidato || 'Desconhecido';
-    console.log(`Enviando mensagem ${i + 1} de ${mensagens.length} para ${nomeCandidato}`);
+    console.log(`Enviando mensagem ${index + 1}/${mensagens.length} para ${nomeCandidato}`);
     const enviado = await enviarMensagemWhatsApp(mensagem);
-
+    
     if (enviado) {
       resultados.sucesso++;
     } else {
@@ -236,8 +148,8 @@ export async function enviarMensagensEmLote(
     }
     resultados.detalhes.push({ candidato: nomeCandidato, enviado });
 
-    if (i < mensagens.length - 1) {
-      console.log(`Aguardando ${delayEntreEnvios}ms antes da próxima mensagem...`);
+    if (index < mensagens.length - 1) {
+      console.log(`Aguardando ${delayEntreEnvios}ms...`);
       await new Promise(resolve => setTimeout(resolve, delayEntreEnvios));
     }
   }
