@@ -1,8 +1,9 @@
 import prisma from '@/lib/prisma'
-import { Prisma, Candidatos } from '@prisma/client' // Importando o tipo Candidatos diretamente
+import { Prisma, Candidatos } from '@prisma/client'
 import Link from 'next/link'
-import Image from 'next/image' // 1. Importar o componente Image
-import { ChevronLeft, ChevronRight, User, Search, Filter, CircleCheck, CircleX, Loader, Cog } from 'lucide-react'
+import Image from 'next/image'
+import { ChevronLeft, ChevronRight, User, Search, Filter, CircleCheck, CircleX, Loader, Cog, MapPin, X } from 'lucide-react'
+import MultiSelectCity from '@/app/components/MultiSelectCity'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +13,61 @@ interface CandidatosPageProps {
     search?: string;
     vaga?: string;
     situacao?: string;
+    cidades?: string;
+  }
+}
+
+// Função para normalizar nomes de cidades
+function normalizeCityName(cityName: string): string {
+  if (!cityName) return '';
+  
+  return cityName
+    .trim()
+    .toLowerCase()
+    // Remove acentos
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    // Padroniza apostrofes e espaços
+    .replace(/[''`´]/g, "'")
+    .replace(/\s+/g, ' ')
+    // Remove caracteres especiais extras
+    .replace(/[^\w\s']/g, '')
+    // Capitaliza primeira letra de cada palavra
+    .replace(/\b\w/g, l => l.toUpperCase());
+}
+
+// Função para buscar cidades únicas e normalizadas
+async function getCidadesUnicas() {
+  try {
+    const cidadesRaw = await prisma.candidatos.findMany({
+      select: { cidadeCandidato: true },
+      distinct: ['cidadeCandidato'],
+      // CORREÇÃO APLICADA AQUI
+      where: {
+        NOT: [
+          { cidadeCandidato: null },
+          { cidadeCandidato: '' }
+        ]
+      },
+      orderBy: { cidadeCandidato: 'asc' }
+    });
+
+    // Normaliza e remove duplicatas
+    const cidadesMap = new Map<string, string>();
+    
+    cidadesRaw.forEach(({ cidadeCandidato }) => {
+      if (cidadeCandidato) {
+        const normalized = normalizeCityName(cidadeCandidato);
+        if (normalized && !cidadesMap.has(normalized)) {
+          cidadesMap.set(normalized, cidadeCandidato);
+        }
+      }
+    });
+
+    return Array.from(cidadesMap.keys()).sort();
+  } catch (error) {
+    console.error('Erro ao buscar cidades:', error);
+    return [];
   }
 }
 
@@ -19,8 +75,15 @@ export default async function CandidatosPage({ searchParams }: CandidatosPagePro
   const page = parseInt(searchParams?.page || '1')
   const limit = 10
   const offset = (page - 1) * limit
-  const { search, vaga, situacao } = searchParams || {}
+  const { search, vaga, situacao, cidades } = searchParams || {}
+  
+  // Processa as cidades selecionadas
+  const selectedCities = cidades ? cidades.split(',').filter(Boolean) : [];
+  
+  // Buscar cidades disponíveis
+  const cidadesDisponiveis = await getCidadesUnicas();
 
+  // Constrói o filtro incluindo cidades
   const filter: Prisma.CandidatosWhereInput = {
     ...(search && {
       OR: [
@@ -30,6 +93,14 @@ export default async function CandidatosPage({ searchParams }: CandidatosPagePro
     }),
     ...(vaga && { vagainteresseCandidato: { equals: vaga } }),
     ...(situacao && { situacaoCandidato: { equals: situacao } }),
+    ...(selectedCities.length > 0 && {
+      OR: selectedCities.map(city => ({
+        cidadeCandidato: {
+          contains: city,
+          mode: Prisma.QueryMode.insensitive
+        }
+      }))
+    }),
   }
 
   const [candidatos, total] = await Promise.all([
@@ -50,6 +121,7 @@ export default async function CandidatosPage({ searchParams }: CandidatosPagePro
     if (search) params.set('search', search)
     if (vaga) params.set('vaga', vaga)
     if (situacao) params.set('situacao', situacao)
+    if (cidades) params.set('cidades', cidades)
     return `/candidatos?${params.toString()}`
   }
 
@@ -138,39 +210,147 @@ export default async function CandidatosPage({ searchParams }: CandidatosPagePro
 
           <div className="bg-blue-50/50 border-b border-blue-100 p-6">
             <form action="/candidatos" method="GET" className="space-y-4">
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="relative flex-1">
+              <div className="flex flex-col gap-4">
+                {/* Primeira linha - Campo de busca */}
+                <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Search className="h-5 w-5 text-blue-400" />
                   </div>
                   <input
-                    type="text" name="search" defaultValue={search} placeholder="Buscar por nome ou email..."
+                    type="text" 
+                    name="search" 
+                    defaultValue={search} 
+                    placeholder="Buscar por nome ou email..."
                     className="block w-full pl-10 pr-3 py-3 border border-blue-200 rounded-lg leading-5 bg-white placeholder-blue-400 text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all"
                     aria-label="Buscar candidatos"
                   />
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-4 md:w-auto w-full">
-                  <div className="relative">
-                    <select name="vaga" defaultValue={searchParams?.vaga || ''} className="appearance-none pl-3 pr-10 py-3 border border-blue-200 rounded-lg bg-white text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-48 shadow-sm transition-all">
+                {/* Segunda linha - Filtros */}
+                <div className="flex flex-col lg:flex-row gap-4">
+                  {/* Select de Vagas */}
+                  <div className="relative flex-1 lg:max-w-xs">
+                    <select 
+                      name="vaga" 
+                      defaultValue={vaga || ''} 
+                      className="appearance-none pl-3 pr-10 py-3 border border-blue-200 rounded-lg bg-white text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full shadow-sm transition-all"
+                    >
                       <option value="">Todas as Vagas</option>
-                      {vagasOptions.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
+                      {vagasOptions.map(option => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
                     </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none"><Filter className="h-4 w-4 text-blue-500" /></div>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <Filter className="h-4 w-4 text-blue-500" />
+                    </div>
                   </div>
 
-                  <div className="relative">
-                    <select name="situacao" defaultValue={searchParams?.situacao || ''} className="appearance-none pl-3 pr-10 py-3 border border-blue-200 rounded-lg bg-white text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-48 shadow-sm transition-all">
+                  {/* Select de Situação */}
+                  <div className="relative flex-1 lg:max-w-xs">
+                    <select 
+                      name="situacao" 
+                      defaultValue={situacao || ''} 
+                      className="appearance-none pl-3 pr-10 py-3 border border-blue-200 rounded-lg bg-white text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full shadow-sm transition-all"
+                    >
                       <option value="">Todas as Situações</option>
-                      {situacaoOptions.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
+                      {situacaoOptions.map(option => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
                     </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none"><Filter className="h-4 w-4 text-blue-500" /></div>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <Filter className="h-4 w-4 text-blue-500" />
+                    </div>
                   </div>
 
-                  <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition shadow-sm font-medium flex items-center justify-center">
-                    <Search className="w-4 h-4 mr-2" /> Filtrar
-                  </button>
+                  {/* Multi-select de Cidades */}
+                  <div className="flex-1 lg:max-w-sm">
+                    <MultiSelectCity
+                      name="cidades"
+                      selectedCities={selectedCities}
+                      availableCities={cidadesDisponiveis}
+                      placeholder="Selecione cidades..."
+                    />
+                  </div>
+
+                  {/* Botão de Filtrar */}
+                  <div className="flex-shrink-0">
+                    <button 
+                      type="submit" 
+                      className="w-full lg:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition shadow-sm font-medium flex items-center justify-center whitespace-nowrap"
+                    >
+                      <Search className="w-4 h-4 mr-2" /> Filtrar
+                    </button>
+                  </div>
                 </div>
+
+                {/* Chips de filtros ativos */}
+                {(selectedCities.length > 0 || vaga || situacao) && (
+                  <div className="flex flex-wrap gap-2 pt-2 border-t border-blue-200">
+                    <span className="text-sm text-blue-700 font-medium">Filtros ativos:</span>
+                    
+                    {vaga && (
+                      <div className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                        <span>Vaga: {vaga}</span>
+                        <Link 
+                          href={`/candidatos?${new URLSearchParams({
+                            ...(search && { search }),
+                            ...(situacao && { situacao }),
+                            ...(cidades && { cidades }),
+                            page: '1'
+                          }).toString()}`}
+                          className="ml-1 hover:text-blue-600"
+                        >
+                          <X className="w-3 h-3" />
+                        </Link>
+                      </div>
+                    )}
+
+                    {situacao && (
+                      <div className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                        <span>Situação: {situacao}</span>
+                        <Link 
+                          href={`/candidatos?${new URLSearchParams({
+                            ...(search && { search }),
+                            ...(vaga && { vaga }),
+                            ...(cidades && { cidades }),
+                            page: '1'
+                          }).toString()}`}
+                          className="ml-1 hover:text-blue-600"
+                        >
+                          <X className="w-3 h-3" />
+                        </Link>
+                      </div>
+                    )}
+
+                    {selectedCities.map(city => (
+                      <div key={city} className="inline-flex items-center gap-1 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
+                        <MapPin className="w-3 h-3" />
+                        <span>{city}</span>
+                        <Link 
+                          href={`/candidatos?${new URLSearchParams({
+                            ...(search && { search }),
+                            ...(vaga && { vaga }),
+                            ...(situacao && { situacao }),
+                            ...(selectedCities.filter(c => c !== city).length > 0 && { 
+                              cidades: selectedCities.filter(c => c !== city).join(',') 
+                            }),
+                            page: '1'
+                          }).toString()}`}
+                          className="ml-1 hover:text-green-600"
+                        >
+                          <X className="w-3 h-3" />
+                        </Link>
+                      </div>
+                    ))}
+
+                    <Link 
+                      href="/candidatos" 
+                      className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm underline"
+                    >
+                      Limpar todos os filtros
+                    </Link>
+                  </div>
+                )}
               </div>
               <input type="hidden" name="page" value="1" />
             </form>
@@ -195,12 +375,11 @@ export default async function CandidatosPage({ searchParams }: CandidatosPagePro
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-900 flex items-center gap-3">
                         <div className="relative w-10 h-10 rounded-full overflow-hidden border border-blue-200 shadow-sm">
                           {candidato.fotoCandidato ? (
-                            // 2. Substituído <img> por <Image>
                             <Image
                               src={candidato.fotoCandidato}
                               alt={`Foto de ${candidato.nomeCandidato}`}
-                              layout="fill"
-                              objectFit="cover"
+                              fill
+                              style={{ objectFit: 'cover' }}
                             />
                           ) : (
                             <div className="w-full h-full bg-blue-100 flex items-center justify-center">
@@ -210,11 +389,16 @@ export default async function CandidatosPage({ searchParams }: CandidatosPagePro
                         </div>
                         <div>
                           <div className="font-medium">{candidato.nomeCandidato}</div>
-                          <div className="text-xs text-gray-500 hidden sm:block">{candidato.cidadeCandidato}</div>
+                          <div className="text-xs text-gray-500 hidden sm:flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {candidato.cidadeCandidato}
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-700 hidden md:table-cell">
-                        <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-md text-xs font-medium">{candidato.vagainteresseCandidato}</span>
+                        <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-md text-xs font-medium">
+                          {candidato.vagainteresseCandidato}
+                        </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${getSituacaoStyle(candidato.situacaoCandidato)}`}>
@@ -226,7 +410,10 @@ export default async function CandidatosPage({ searchParams }: CandidatosPagePro
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <Link href={`/candidatos/${candidato.idCandidato}`} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors group-hover:bg-blue-100">
+                        <Link 
+                          href={`/candidatos/${candidato.idCandidato}`} 
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors group-hover:bg-blue-100"
+                        >
                           <Search className="w-4 h-4" /> <span>Detalhes</span>
                         </Link>
                       </td>
@@ -251,10 +438,22 @@ export default async function CandidatosPage({ searchParams }: CandidatosPagePro
             <div className="px-6 py-5 bg-gradient-to-b from-white to-blue-50 border-t border-blue-100">
               <div className="flex items-center justify-between">
                 <div className="flex-1 flex justify-between sm:hidden">
-                  <Link href={page > 1 ? getPaginationLink(page - 1) : '#'} className={`relative inline-flex items-center px-4 py-2 border border-blue-300 text-sm font-medium rounded-md ${page > 1 ? 'bg-white text-blue-700 hover:bg-blue-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`} aria-disabled={page <= 1}>
+                  <Link 
+                    href={page > 1 ? getPaginationLink(page - 1) : '#'} 
+                    className={`relative inline-flex items-center px-4 py-2 border border-blue-300 text-sm font-medium rounded-md ${
+                      page > 1 ? 'bg-white text-blue-700 hover:bg-blue-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    }`} 
+                    aria-disabled={page <= 1}
+                  >
                     Anterior
                   </Link>
-                  <Link href={page < totalPages ? getPaginationLink(page + 1) : '#'} className={`ml-3 relative inline-flex items-center px-4 py-2 border border-blue-300 text-sm font-medium rounded-md ${page < totalPages ? 'bg-white text-blue-700 hover:bg-blue-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`} aria-disabled={page >= totalPages}>
+                  <Link 
+                    href={page < totalPages ? getPaginationLink(page + 1) : '#'} 
+                    className={`ml-3 relative inline-flex items-center px-4 py-2 border border-blue-300 text-sm font-medium rounded-md ${
+                      page < totalPages ? 'bg-white text-blue-700 hover:bg-blue-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    }`} 
+                    aria-disabled={page >= totalPages}
+                  >
                     Próxima
                   </Link>
                 </div>
@@ -267,20 +466,48 @@ export default async function CandidatosPage({ searchParams }: CandidatosPagePro
                     </p>
                   </div>
                   <nav className="relative z-0 inline-flex shadow-sm -space-x-px" aria-label="Paginação">
-                    <Link href={page > 1 ? getPaginationLink(page - 1) : '#'} className={`relative inline-flex items-center px-3 py-2 rounded-l-lg border border-blue-200 bg-white text-sm font-medium ${page > 1 ? 'text-blue-600 hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'}`} aria-disabled={page <= 1}>
-                      <span className="sr-only">Anterior</span><ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                    <Link 
+                      href={page > 1 ? getPaginationLink(page - 1) : '#'} 
+                      className={`relative inline-flex items-center px-3 py-2 rounded-l-lg border border-blue-200 bg-white text-sm font-medium ${
+                        page > 1 ? 'text-blue-600 hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'
+                      }`} 
+                      aria-disabled={page <= 1}
+                    >
+                      <span className="sr-only">Anterior</span>
+                      <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                     </Link>
                     {getPaginationRange().map((item, i) =>
                       item === 'ellipsis' ? (
-                        <span key={`ellipsis-${i}`} className="relative inline-flex items-center px-4 py-2 border border-blue-200 bg-white text-sm font-medium text-gray-700">...</span>
+                        <span 
+                          key={`ellipsis-${i}`} 
+                          className="relative inline-flex items-center px-4 py-2 border border-blue-200 bg-white text-sm font-medium text-gray-700"
+                        >
+                          ...
+                        </span>
                       ) : (
-                        <Link key={`page-${item}`} href={getPaginationLink(item as number)} className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${page === item ? 'z-10 bg-blue-600 border-blue-600 text-white' : 'bg-white border-blue-200 text-blue-600 hover:bg-blue-50'}`} aria-current={page === item ? 'page' : undefined}>
+                        <Link 
+                          key={`page-${item}`} 
+                          href={getPaginationLink(item as number)} 
+                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                            page === item 
+                              ? 'z-10 bg-blue-600 border-blue-600 text-white' 
+                              : 'bg-white border-blue-200 text-blue-600 hover:bg-blue-50'
+                          }`} 
+                          aria-current={page === item ? 'page' : undefined}
+                        >
                           {item}
                         </Link>
                       )
                     )}
-                    <Link href={page < totalPages ? getPaginationLink(page + 1) : '#'} className={`relative inline-flex items-center px-3 py-2 rounded-r-lg border border-blue-200 bg-white text-sm font-medium ${page < totalPages ? 'text-blue-600 hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'}`} aria-disabled={page >= totalPages}>
-                      <span className="sr-only">Próxima</span><ChevronRight className="h-5 w-5" aria-hidden="true" />
+                    <Link 
+                      href={page < totalPages ? getPaginationLink(page + 1) : '#'} 
+                      className={`relative inline-flex items-center px-3 py-2 rounded-r-lg border border-blue-200 bg-white text-sm font-medium ${
+                        page < totalPages ? 'text-blue-600 hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'
+                      }`} 
+                      aria-disabled={page >= totalPages}
+                    >
+                      <span className="sr-only">Próxima</span>
+                      <ChevronRight className="h-5 w-5" aria-hidden="true" />
                     </Link>
                   </nav>
                 </div>
