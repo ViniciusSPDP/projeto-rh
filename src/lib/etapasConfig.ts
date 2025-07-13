@@ -19,7 +19,8 @@ export async function getEtapasConfig(): Promise<EtapasConfig> {
       // Retorna o padrão se o arquivo não existir
       return {
         disparoPorEtapaAtivado: false,
-        templatesPorEtapa: {}
+        templatesPorEtapa: {},
+        delayEntreEnvios: 2000 // Valor padrão adicionado
       };
     }
     throw error; // Lança outros erros

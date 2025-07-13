@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import type { EtapasConfig, TemplateEtapa } from '@/types/configuracoes';
-import { Loader2, CheckCircle, Save, ToggleLeft, ToggleRight, AlertTriangle, Timer } from 'lucide-react';
+import { Loader2, CheckCircle, Save, ToggleLeft, ToggleRight, AlertTriangle, Timer, Workflow, ChevronDown } from 'lucide-react';
 
 const ETAPAS_DO_PROCESSO = [
   'Em recrutamento',
@@ -13,27 +13,24 @@ const ETAPAS_DO_PROCESSO = [
   'Feedback',
 ];
 
-
 export default function EtapasConfigPage() {
   const [config, setConfig] = useState<EtapasConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [openEtapa, setOpenEtapa] = useState<string | null>(ETAPAS_DO_PROCESSO[0]); // Deixa a primeira etapa aberta por padrão
 
+  // A lógica de carregar e salvar permanece a mesma.
   useEffect(() => {
     async function loadConfig() {
       try {
         const response = await fetch('/api/configuracoes/etapas');
         if (!response.ok) throw new Error('Falha ao carregar configurações');
         const data = await response.json();
-        
-        // --- AJUSTE DE LÓGICA AQUI ---
-        // Garante que o delay tenha um valor padrão se não vier da API, evitando erros.
         if (data.config && typeof data.config.delayEntreEnvios === 'undefined') {
-          data.config.delayEntreEnvios = 2000; // Padrão de 2 segundos
+          data.config.delayEntreEnvios = 2000;
         }
         setConfig(data.config);
-
       } catch (error) {
         console.error(error);
         setSaveMessage({ text: 'Erro ao carregar configurações.', type: 'error' });
@@ -70,7 +67,9 @@ export default function EtapasConfigPage() {
     setConfig({ ...config, disparoPorEtapaAtivado: !config.disparoPorEtapaAtivado });
   };
 
-  const handleTemplateChange = (etapa: string, field: keyof TemplateEtapa, value: any) => {
+  // --- CORREÇÃO DO TYPESCRIPT APLICADA AQUI ---
+  // Trocamos 'value: any' por 'value: string | boolean' para ser mais específico e seguro.
+  const handleTemplateChange = (etapa: string, field: keyof TemplateEtapa, value: string | boolean) => {
     if (!config) return;
     setConfig(prevConfig => ({
       ...prevConfig!,
@@ -103,109 +102,116 @@ export default function EtapasConfigPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 p-6">
+    <main className="min-h-screen bg-gray-50 p-6 md:p-8">
       <div className="mx-auto max-w-4xl">
-        <h1 className="text-3xl font-bold text-gray-800">Notificações por Etapa do Processo</h1>
-        <p className="mt-2 text-gray-600">
-          Configure mensagens automáticas via WhatsApp para cada mudança de etapa dos candidatos.
-        </p>
-        
-        {/* Card do Interruptor Geral */}
-        <div className="mt-8 rounded-lg bg-white p-6 shadow-md">
+        {/* Cabeçalho */}
+        <div className="mb-10">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
+              <Workflow className="h-7 w-7 text-blue-600" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Notificações por Etapa</h1>
+              <p className="mt-1 text-gray-600">
+                Configure mensagens e delays para cada avanço no processo seletivo.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Card de Controle Geral */}
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold">Disparo por Etapa</h2>
-              <p className="text-sm text-gray-500">Ativa ou desativa TODAS as notificações de mudança de etapa.</p>
+              <h2 className="text-xl font-semibold text-gray-800">Controle Geral</h2>
+              <p className="text-sm text-gray-500">Ativa ou desativa todas as notificações de etapa.</p>
             </div>
             <button onClick={toggleDisparoGeral}>
               {config.disparoPorEtapaAtivado ? (
-                <ToggleRight className="h-12 w-12 text-green-600" />
+                <ToggleRight className="h-12 w-12 text-green-500 transition-colors" />
               ) : (
-                <ToggleLeft className="h-12 w-12 text-gray-400" />
+                <ToggleLeft className="h-12 w-12 text-gray-400 transition-colors" />
               )}
             </button>
           </div>
-          
-          {/* --- AJUSTE DE LAYOUT AQUI --- */}
-          {/* O campo de delay foi movido para DENTRO deste card. */}
-          <div className="mt-6 border-t pt-4">
+          <div className="mt-6 border-t pt-6">
             <label htmlFor="delay" className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <Timer className="h-5 w-5" />
               Intervalo entre envios (em milissegundos)
             </label>
-            <p className="mb-2 text-xs text-gray-500">Aguardar um tempo entre cada mensagem ao vincular múltiplos candidatos. (Ex: 2000 = 2 segundos). Recomendado: acima de 1500.</p>
+            <p className="mb-2 text-xs text-gray-500">Pausa ao vincular múltiplos candidatos. Recomendado: 2000ms.</p>
             <input
               type="number"
               id="delay"
-              value={config.delayEntreEnvios || 0} // Adicionado '|| 0' para segurança
+              value={config.delayEntreEnvios || 0}
               onChange={handleDelayChange}
-              className="w-full max-w-xs rounded-md border-gray-300 p-2 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="w-full max-w-xs rounded-lg border-gray-300 p-2 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
               placeholder="Ex: 2000"
             />
           </div>
-        </div> {/* <-- A div do card agora fecha aqui, corretamente. */}
-
-
-        {/* Templates para cada Etapa */}
-        <div className={`mt-6 space-y-4 transition-opacity ${!config.disparoPorEtapaAtivado ? 'opacity-50' : ''}`}>
-          <h2 className="text-2xl font-semibold text-gray-700">Templates de Mensagem</h2>
-          {ETAPAS_DO_PROCESSO.map(etapa => (
-            <div key={etapa} className="rounded-lg border border-gray-200 bg-white shadow-sm">
-              <div className="flex items-center justify-between border-b bg-gray-50 p-4">
-                <h3 className="font-semibold text-gray-800">{etapa}</h3>
-                <button 
-                  onClick={() => handleTemplateChange(etapa, 'ativo', !config.templatesPorEtapa[etapa]?.ativo)}
-                  disabled={!config.disparoPorEtapaAtivado}
-                  className="flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium"
-                >
-                  {config.templatesPorEtapa[etapa]?.ativo ? (
-                     <><CheckCircle className="h-4 w-4 text-green-500" /> Ativo</>
-                  ) : (
-                     <><AlertTriangle className="h-4 w-4 text-gray-400" /> Inativo</>
-                  )}
-                </button>
-              </div>
-              <div className="p-4">
-                <label htmlFor={`msg-${etapa}`} className="mb-2 block text-sm font-medium text-gray-700">
-                  Mensagem para a etapa:
-                </label>
-                <textarea
-                  id={`msg-${etapa}`}
-                  value={config.templatesPorEtapa[etapa]?.mensagem || ''}
-                  onChange={(e) => handleTemplateChange(etapa, 'mensagem', e.target.value)}
-                  disabled={!config.disparoPorEtapaAtivado || !config.templatesPorEtapa[etapa]?.ativo}
-                  placeholder={`Ex: Olá {nomeCandidato}, parabéns! Você avançou para a etapa de ${etapa}.`}
-                  className="w-full rounded-md border-gray-300 p-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100"
-                  rows={3}
-                />
-              </div>
-            </div>
-          ))}
         </div>
 
-        {/* Botão de Salvar Fixo */}
-        <div className="sticky bottom-0 mt-8 rounded-t-lg border-t bg-white/80 p-4 backdrop-blur-sm">
-          <div className="flex items-center justify-end gap-4">
+        {/* Seção de Templates com Acordeão */}
+        <div className={`mt-8 transition-opacity duration-300 ${!config.disparoPorEtapaAtivado ? 'opacity-50' : ''}`}>
+          <h2 className="mb-4 text-xl font-semibold text-gray-800">Templates de Mensagem</h2>
+          <div className="space-y-2 rounded-xl border border-gray-200 bg-white p-2 shadow-sm">
+            {ETAPAS_DO_PROCESSO.map(etapa => (
+              <div key={etapa} className="overflow-hidden rounded-lg">
+                {/* Cabeçalho do Acordeão (Botão de Título) */}
+                <button
+                  onClick={() => setOpenEtapa(openEtapa === etapa ? null : etapa)}
+                  disabled={!config.disparoPorEtapaAtivado}
+                  className="flex w-full items-center justify-between bg-gray-50 p-4 text-left transition-colors hover:bg-gray-100 disabled:cursor-not-allowed"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      onClick={(e) => { e.stopPropagation(); handleTemplateChange(etapa, 'ativo', !config.templatesPorEtapa[etapa]?.ativo); }}
+                      className={`flex h-6 w-10 items-center rounded-full p-1 transition-colors ${config.templatesPorEtapa[etapa]?.ativo ? 'bg-green-500' : 'bg-gray-300'}`}
+                    >
+                      <div className={`h-4 w-4 rounded-full bg-white shadow-md transition-transform ${config.templatesPorEtapa[etapa]?.ativo ? 'translate-x-4' : 'translate-x-0'}`} />
+                    </div>
+                    <span className="font-semibold text-gray-800">{etapa}</span>
+                  </div>
+                  <ChevronDown className={`h-5 w-5 text-gray-500 transition-transform ${openEtapa === etapa ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {/* Conteúdo do Acordeão */}
+                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${openEtapa === etapa ? 'max-h-96' : 'max-h-0'}`}>
+                  <div className="p-6">
+                    <label htmlFor={`msg-${etapa}`} className="mb-2 block text-sm font-medium text-gray-700">
+                      Mensagem para a etapa:
+                    </label>
+                    <textarea
+                      id={`msg-${etapa}`}
+                      value={config.templatesPorEtapa[etapa]?.mensagem || ''}
+                      onChange={(e) => handleTemplateChange(etapa, 'mensagem', e.target.value)}
+                      disabled={!config.disparoPorEtapaAtivado || !config.templatesPorEtapa[etapa]?.ativo}
+                      placeholder={`Ex: Olá {nomeCandidato}, parabéns! Você avançou para a etapa de ${etapa}.`}
+                      className="w-full text-gray-600 resize-none rounded-lg border-gray-300 p-3 font-mono text-sm shadow-inner focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:bg-gray-100"
+                      rows={5}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Barra de Ação Flutuante */}
+        <div className="sticky bottom-0 mt-8 rounded-t-2xl border-t border-gray-200 bg-white/80 p-4 backdrop-blur-sm">
+          <div className="mx-auto flex max-w-7xl items-center justify-end">
             {saveMessage && (
-              <div className={`flex items-center gap-2 text-sm font-semibold ${saveMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
-                {saveMessage.type === 'success' ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
+              <div className={`mr-4 flex items-center gap-2 text-sm font-medium ${saveMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                {saveMessage.type === 'success' ? <CheckCircle className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
                 {saveMessage.text}
               </div>
             )}
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="flex w-40 items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-white shadow-md transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+              className="flex min-w-[150px] items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:bg-blue-700 hover:shadow-lg disabled:cursor-not-allowed disabled:bg-gray-400"
             >
-              {isSaving ? (
-                <>
-                  <Loader2 className="animate-spin" size={20} /> Salvando...
-                </>
-              ) : (
-                <>
-                  <Save size={20} /> Salvar Alterações
-                </>
-              )}
+              {isSaving ? <><Loader2 className="h-5 w-5 animate-spin" /> Salvando...</> : <><Save className="h-5 w-5" /> Salvar Alterações</>}
             </button>
           </div>
         </div>

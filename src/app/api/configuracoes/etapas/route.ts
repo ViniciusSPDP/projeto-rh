@@ -33,7 +33,8 @@ export async function GET() {
       // Retorna um objeto padrão se o arquivo não for encontrado
       const defaultConfig: EtapasConfig = {
         disparoPorEtapaAtivado: false,
-        templatesPorEtapa: {} // Começa sem nenhum template
+        templatesPorEtapa: {}, // Começa sem nenhum template
+        delayEntreEnvios: 2000 // Valor padrão de 2 segundos
       };
       return NextResponse.json({ config: defaultConfig });
     }

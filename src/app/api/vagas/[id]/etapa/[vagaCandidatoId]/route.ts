@@ -2,8 +2,19 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getEtapasConfig } from '@/lib/etapasConfig'; // 1. IMPORTAÇÃO ADICIONAL
-import { enviarMensagemSimples } from '@/lib/whatsapp-service'; // 1. IMPORTAÇÃO ADICIONAL (ver nota no final)
+import { getEtapasConfig } from '@/lib/etapasConfig';
+import { enviarMensagemSimples } from '@/lib/whatsapp-service';
+
+// --- 1. FUNÇÃO AUXILIAR PARA FORMATAR DATAS ---
+const formatDate = (date: Date | null | undefined): string => {
+  if (!date) return '';
+  // Garante que a data seja tratada como UTC para evitar problemas de fuso horário
+  const d = new Date(date);
+  const dia = String(d.getUTCDate()).padStart(2, '0');
+  const mes = String(d.getUTCMonth() + 1).padStart(2, '0'); // Meses são de 0 a 11
+  const ano = d.getUTCFullYear();
+  return `${dia}/${mes}/${ano}`;
+};
   
 // Definindo a interface para o contexto da rota
 interface Context {
@@ -18,7 +29,7 @@ export async function PATCH(
   context: Context
 ) {
   const { vagaCandidatoId } = context.params;
-  const { etapa: novaEtapa } = await req.json(); // Renomeado para clareza
+  const { etapa: novaEtapa } = await req.json();
 
   const vagaCandidatoIdNum = Number(vagaCandidatoId);
 
@@ -27,40 +38,54 @@ export async function PATCH(
   }
 
   try {
-    // Ação principal: Atualiza a etapa do candidato no banco de dados
     const vagaCandidatoAtualizado = await prisma.vagaCandidato.update({
       where: { id: vagaCandidatoIdNum },
       data: { etapa: novaEtapa },
-      // 2. MODIFICAÇÃO NO PRISMA: Incluímos dados do candidato e da vaga para usar na mensagem
       include: {
-        candidato: true, // Traz todos os dados do candidato relacionado
-        vaga: true,      // Traz todos os dados da vaga relacionada
+        candidato: true,
+        vaga: true,
       }
     });
 
-    // --- INÍCIO DA LÓGICA DE NOTIFICAÇÃO AUTOMÁTICA ---
-
-    // 3. Busca as configurações de notificação que você criou na nova tela
+    // --- INÍCIO DA LÓGICA DE NOTIFICAÇÃO ---
     const config = await getEtapasConfig();
     const candidato = vagaCandidatoAtualizado.candidato;
+    const vaga = vagaCandidatoAtualizado.vaga;
+    const situacaoCandidato = novaEtapa; // A nova situação é a nova etapa
 
-    // 4. VERIFICAÇÃO TRIPLA: Só continua se todas as condições forem verdadeiras
     if (
-      config.disparoPorEtapaAtivado &&                  // A. O recurso geral de "Disparo por Etapa" está ATIVO?
-      candidato?.telefoneCandidato &&                   // B. O candidato possui um número de telefone cadastrado?
-      config.templatesPorEtapa[novaEtapa]?.ativo        // C. O template para ESTA etapa específica está ATIVO?
+      config.disparoPorEtapaAtivado &&
+      candidato?.telefoneCandidato &&
+      config.templatesPorEtapa[novaEtapa]?.ativo
     ) {
       
-      // Se passou na verificação, busca a mensagem do template
       const templateMensagem = config.templatesPorEtapa[novaEtapa].mensagem;
       
-      // 5. PERSONALIZAÇÃO: Substitui as variáveis na mensagem pelos dados reais
+      // --- 2. BLOCO DE PERSONALIZAÇÃO ATUALIZADO ---
       const mensagemPersonalizada = templateMensagem
-        .replace(/{nomeCandidato}/g, candidato.nomeCandidato || 'Candidato(a)')
-        .replace(/{tituloVaga}/g, vagaCandidatoAtualizado.vaga.titulo || 'Vaga');
-        // Você pode adicionar mais variáveis aqui (ex: .replace(/{nomeEmpresa}/g, ...))
+        .replace(/{{titulo}}/g, vaga.titulo || '')
+        .replace(/{{status}}/g, vaga.status || '')
+        .replace(/{{etapa}}/g, novaEtapa || '')
+        .replace(/{{nomeCandidato}}/g, candidato.nomeCandidato || '')
+        .replace(/{{emailCandidato}}/g, candidato.emailCandidato || '')
+        .replace(/{{cpfCandidato}}/g, candidato.cpfCandidato || '')
+        .replace(/{{telefoneCandidato}}/g, candidato.telefoneCandidato || '')
+        .replace(/{{datanascimentoCandidato}}/g, formatDate(candidato.datanascimentoCandidato))
+        .replace(/{{rgCandidato}}/g, candidato.rgCandidato || '')
+        .replace(/{{sexoCandidato}}/g, candidato.sexoCandidato || '')
+        .replace(/{{estadocivilCandidato}}/g, candidato.estadocivilCandidato || '')
+        .replace(/{{escolaridadeCandidato}}/g, candidato.escolaridadeCandidato || '')
+        .replace(/{{situacaoCandidato}}/g, situacaoCandidato)
+        .replace(/{{cepCandidato}}/g, candidato.cepCandidato || '')
+        .replace(/{{ruaCandidato}}/g, candidato.ruaCandidato || '')
+        .replace(/{{numeroCandidato}}/g, candidato.numeroCandidato || '')
+        .replace(/{{bairroCandidato}}/g, candidato.bairroCandidato || '')
+        .replace(/{{cidadeCandidato}}/g, candidato.cidadeCandidato || '')
+        .replace(/{{estadoCandidato}}/g, candidato.estadoCandidato || '')
+        .replace(/{{empresaCandidato}}/g, candidato.empresaCandidato || '')
+        .replace(/{{empresa2Candidato}}/g, candidato.empresa2Candidato || '')
+        .replace(/{{empresa3Candidato}}/g, candidato.empresa3Candidato || '');
       
-      // 6. DISPARO: Envia a mensagem em segundo plano para não atrasar a resposta da API
       enviarMensagemSimples(candidato.telefoneCandidato, mensagemPersonalizada)
         .then(() => console.log(`Notificação de etapa enviada para ${candidato.nomeCandidato} (${candidato.telefoneCandidato})`))
         .catch(err => console.error("Falha no envio da notificação de etapa via WhatsApp:", err));
@@ -68,7 +93,6 @@ export async function PATCH(
 
     // --- FIM DA LÓGICA DE NOTIFICAÇÃO ---
 
-    // A resposta para o frontend continua a mesma, retornando os dados atualizados
     return NextResponse.json({
       ...vagaCandidatoAtualizado,
       vagaId: Number(vagaCandidatoAtualizado.vagaId),

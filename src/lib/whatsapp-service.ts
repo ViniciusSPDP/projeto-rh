@@ -4,7 +4,7 @@ import { evolutionFetch, EVOLUTION_API } from './evolution-api';
 import { promises as fs } from 'fs';
 import path from 'path';
 
-const CONFIG_FILE = path.join(process.cwd(), 'config', 'whatsapp-templates.json');
+const CONFIG_FILE = path.join(process.cwd(), 'data', 'whatsapp-config.json');
 
 interface Template {
   tipo: 'CONTRATADO' | 'REPROVADO';
@@ -28,12 +28,20 @@ interface ConfigWhatsApp {
   delayEntreEnvios: number;
 }
 
+// Definindo tipos para os erros da API
+interface ApiError {
+  response?: {
+    data?: unknown;
+  };
+  message?: string;
+}
+
 async function getWhatsAppConfig(): Promise<ConfigWhatsApp | null> {
   try {
     const data = await fs.readFile(CONFIG_FILE, 'utf-8');
     return JSON.parse(data);
   } catch (error) {
-    console.error('ERRO: Não foi possível carregar o arquivo de configuração de templates (whatsapp-templates.json).', error);
+    console.error('ERRO: Não foi possível carregar o arquivo de configuração de templates (whatsapp-config.json).', error);
     return null;
   }
 }
@@ -142,12 +150,17 @@ export async function enviarMensagemSimples(numero: string, mensagem: string) {
 
     console.log(`Mensagem SIMPLES enviada com sucesso para ${numeroFormatado}`);
     return response;
-  } catch (error: any) {
-    console.error(`ERRO ao enviar mensagem SIMPLES para ${numero}:`, error.response?.data || error.message);
+  } catch (error) {
+    // Verificando se é um erro com response (tipo ApiError)
+    const apiError = error as ApiError;
+    
+    // Tratamento mais específico do erro
+    const errorMessage = apiError.response?.data || apiError.message || 'Erro desconhecido';
+    
+    console.error(`ERRO ao enviar mensagem SIMPLES para ${numero}:`, errorMessage);
     throw new Error('Falha ao enviar mensagem simples via Evolution API');
   }
 }
-
 
 export async function verificarConexaoWhatsApp(): Promise<boolean> {
   try {

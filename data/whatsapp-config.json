@@ -2,10 +2,10 @@
   "disparoAutomatico": true,
   "templates": {
     "CONTRATADO": {
-      "mensagem": ""
+      "mensagem": "{{nomeCandidato}}, você foi aprovado para a vaga {{titulo}} !!!"
     },
     "REPROVADO": {
-      "mensagem": ""
+      "mensagem": "{{nomeCandidato}}, você foi reprovaddo para a vaga {{titulo}} !!!"
     }
   },
   "delayEntreEnvios": 2000
