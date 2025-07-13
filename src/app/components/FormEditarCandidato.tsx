@@ -30,6 +30,7 @@ function formatDate(dateString?: string | Date | null): string {
 
 // --- Componente Principal ---
 
+
 export default function FormEditarCandidato({ candidato }: FormEditarCandidatoProps) {
     const router = useRouter()
     const [loading, setLoading] = useState(false)
