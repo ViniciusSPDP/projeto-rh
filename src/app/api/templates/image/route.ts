@@ -31,3 +31,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Falha ao salvar o template.' }, { status: 500 });
   }
 }
+
+export async function GET() {
+  try {
+    const templates = await prisma.imageTemplate.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    return NextResponse.json(templates);
+  } catch (error) {
+    console.error('Erro ao buscar templates:', error);
+    return NextResponse.json({ error: 'Falha ao buscar os templates.' }, { status: 500 });
+  }
+}
