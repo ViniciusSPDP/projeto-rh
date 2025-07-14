@@ -3,9 +3,15 @@
 'use client'; 
 
 import { useState, useRef, useEffect } from 'react';
-import { Stage, Layer, Image as KonvaImage, Text as KonvaText } from 'react-konva';
-import Konva from 'konva';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
+import Konva from 'konva';
+
+// CARREGAMENTO DINÂMICO: Importa o editor apenas no lado do cliente
+const TemplateEditor = dynamic(() => import('@/app/components/TemplateEditor'), {
+  ssr: false, // Desabilita a renderização no servidor
+  loading: () => <p className='text-center'>Carregando editor...</p>, // Mensagem de loading
+});
 
 // Definindo o tipo para os nossos elementos de texto
 interface TextElement {
@@ -20,18 +26,14 @@ interface TextElement {
 export default function NovoTemplateDeImagemPage() {
   const router = useRouter();
 
-  // Estados do nosso editor
+  // Os estados e handlers continuam na página principal
   const [templateName, setTemplateName] = useState('');
   const [backgroundImage, setBackgroundImage] = useState<HTMLImageElement | null>(null);
   const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(null);
   const [elements, setElements] = useState<TextElement[]>([]);
   
-  // A variável 'selectedElementId' foi removida por enquanto para evitar avisos.
-  // Você pode adicioná-la de volta quando for construir o painel de propriedades.
-  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Função para carregar a imagem de fundo no canvas
   useEffect(() => {
     if (backgroundImageUrl) {
       const img = new window.Image();
@@ -42,7 +44,6 @@ export default function NovoTemplateDeImagemPage() {
     }
   }, [backgroundImageUrl]);
 
-  // Função para lidar com o upload do arquivo
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -56,9 +57,7 @@ export default function NovoTemplateDeImagemPage() {
         body: formData,
       });
 
-      if (!response.ok) {
-        throw new Error('Falha no upload da imagem');
-      }
+      if (!response.ok) throw new Error('Falha no upload da imagem');
 
       const data = await response.json();
       setBackgroundImageUrl(data.url); 
@@ -68,7 +67,6 @@ export default function NovoTemplateDeImagemPage() {
     }
   };
 
-  // Função para adicionar um novo texto
   const handleAddText = () => {
     const newText: TextElement = {
       id: `text_${Date.now()}`,
@@ -81,25 +79,17 @@ export default function NovoTemplateDeImagemPage() {
     setElements([...elements, newText]);
   };
 
-  // Função para atualizar a posição do texto ao arrastar
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>, id: string) => {
-    const newElements = elements.slice();
-    const element = newElements.find(el => el.id === id);
-    if (element) {
-      element.x = e.target.x();
-      element.y = e.target.y();
-      setElements(newElements);
-    }
+    setElements(currentElements => 
+      currentElements.map(el => 
+        el.id === id ? { ...el, x: e.target.x(), y: e.target.y() } : el
+      )
+    );
   };
 
-  // Função para salvar o template completo
   const handleSaveTemplate = async () => {
-    if (!templateName) {
-      alert('Por favor, dê um nome ao template.');
-      return;
-    }
-    if (!backgroundImageUrl) {
-      alert('Por favor, envie uma imagem de fundo.');
+    if (!templateName || !backgroundImageUrl) {
+      alert('Por favor, preencha o nome e envie uma imagem de fundo.');
       return;
     }
 
@@ -114,9 +104,7 @@ export default function NovoTemplateDeImagemPage() {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Falha ao salvar o template');
-      }
+      if (!response.ok) throw new Error('Falha ao salvar o template');
 
       alert('Template salvo com sucesso!');
       router.push('/integracoes'); 
@@ -169,7 +157,6 @@ export default function NovoTemplateDeImagemPage() {
           </button>
           <div className='pt-4'>
             <p className="text-xs text-gray-500">Variáveis disponíveis:</p>
-            {/* CORREÇÃO APLICADA AQUI */}
             <p className="text-xs text-gray-500">{'{titulo}'} - Título da vaga</p>
             <p className="text-xs text-gray-500">{'{descricao}'} - Descrição da vaga</p>
           </div>
@@ -187,31 +174,12 @@ export default function NovoTemplateDeImagemPage() {
 
       {/* Área do Editor (Direita) */}
       <div className="flex-1 p-8 flex items-center justify-center">
-        <div className="bg-white shadow-lg rounded-lg">
-          <Stage
-            width={backgroundImage?.width || 800}
-            height={backgroundImage?.height || 600}
-            className="border"
-          >
-            <Layer>
-              {backgroundImage && <KonvaImage image={backgroundImage} />}
-              {elements.map((el) => (
-                <KonvaText
-                  key={el.id}
-                  id={el.id}
-                  text={el.text}
-                  x={el.x}
-                  y={el.y}
-                  fontSize={el.fontSize}
-                  fill={el.fill}
-                  draggable
-                  // A propriedade onClick foi removida daqui
-                  onDragEnd={(e) => handleDragEnd(e, el.id)}
-                />
-              ))}
-            </Layer>
-          </Stage>
-        </div>
+        {/* O editor é renderizado aqui, passando os estados como props */}
+        <TemplateEditor
+          backgroundImage={backgroundImage}
+          elements={elements}
+          onDragEnd={handleDragEnd}
+        />
       </div>
     </div>
   );
