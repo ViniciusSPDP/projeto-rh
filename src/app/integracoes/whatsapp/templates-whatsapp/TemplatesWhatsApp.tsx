@@ -123,7 +123,7 @@ export default function TemplatesWhatsApp() {
               <label htmlFor="delay" className="block text-sm font-medium text-gray-700">Delay entre mensagens</label>
               <p className="mt-1 text-xs text-gray-500">Intervalo em milissegundos para envios em lote. Recomendado: 2000ms.</p>
               <div className="mt-2 flex items-center gap-4">
-                <input id="delay" type="number" min="1000" max="10000" step="500" value={config.delayEntreEnvios} onChange={(e) => updateDelay(Number(e.target.value))} className="w-32 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                <input id="delay" type="number" min="1000" max="10000" step="500" value={config.delayEntreEnvios} onChange={(e) => updateDelay(Number(e.target.value))} className="w-32 rounded-lg border text-gray-500 border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                 <span className="text-sm text-gray-600">({(config.delayEntreEnvios / 1000).toFixed(1)}s)</span>
               </div>
             </div>
