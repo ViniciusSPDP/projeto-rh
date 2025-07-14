@@ -15,6 +15,7 @@
     "bcryptjs": "^3.0.2",
     "chart.js": "^4.4.9",
     "date-fns": "^4.1.0",
+    "konva": "^9.3.22",
     "lucide-react": "^0.507.0",
     "next": "15.3.1",
     "next-auth": "^4.24.11",
@@ -24,7 +25,8 @@
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.5.2",
     "react-icons": "^5.5.0",
-    "react-imask": "^7.6.1"
+    "react-imask": "^7.6.1",
+    "react-konva": "^19.0.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
