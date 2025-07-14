@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { ChevronLeft, ChevronRight, User, Search, Filter, CircleCheck, CircleX, Loader, Cog, MapPin, X } from 'lucide-react'
 import MultiSelectCity from '@/app/components/MultiSelectCity'
+import SearchInput from '@/app/components/SearchInput'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,8 +18,8 @@ interface CandidatosPageProps {
   }
 }
 
-// Função para normalizar nomes de cidades
-function normalizeCityName(cityName: string): string {
+// Função para normalizar nomes de cidades (apenas para comparação)
+function normalizeForComparison(cityName: string): string {
   if (!cityName) return '';
   
   return cityName
@@ -31,9 +32,56 @@ function normalizeCityName(cityName: string): string {
     .replace(/[''`´]/g, "'")
     .replace(/\s+/g, ' ')
     // Remove caracteres especiais extras
-    .replace(/[^\w\s']/g, '')
-    // Capitaliza primeira letra de cada palavra
-    .replace(/\b\w/g, l => l.toUpperCase());
+    .replace(/[^\w\s']/g, '');
+}
+
+// Função para capitalizar nomes de cidades
+function capitalizeCityName(cityName: string): string {
+  if (!cityName) return '';
+  
+  return cityName
+    .trim()
+    .replace(/\s+/g, ' ')
+    // Padroniza apostrofes
+    .replace(/[''`´]/g, "'")
+    // Converte tudo para minúsculo primeiro
+    .toLowerCase()
+    // Capitaliza primeira letra de cada palavra (incluindo após apóstrofe)
+    .split(' ')
+    .map(word => {
+      if (!word) return word;
+      // Capitaliza primeira letra da palavra
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ')
+    // Capitaliza letra após apóstrofe (para casos como D'Oeste)
+    .replace(/'\w/g, match => match.toUpperCase());
+}
+
+// Função para calcular "qualidade" do nome da cidade
+function getCityNameQuality(cityName: string): number {
+  let score = 0;
+  
+  // Pontos por ter acentos corretos
+  if (cityName.includes('ó')) score += 10;
+  if (cityName.includes('á')) score += 10;
+  if (cityName.includes('é')) score += 10;
+  if (cityName.includes('í')) score += 10;
+  if (cityName.includes('ú')) score += 10;
+  if (cityName.includes('ã')) score += 10;
+  if (cityName.includes('õ')) score += 10;
+  if (cityName.includes('ç')) score += 10;
+  
+  // Pontos por capitalização correta (primeira letra maiúscula)
+  if (cityName.match(/^[A-ZÁÉÍÓÚÃÕÇ]/)) score += 5;
+  
+  // Pontos por não ter letras maiúsculas no meio incorretamente
+  if (!cityName.match(/[a-z][A-Z]/)) score += 3;
+  
+  // Perde pontos se tiver tudo maiúsculo
+  if (cityName === cityName.toUpperCase()) score -= 5;
+  
+  return score;
 }
 
 // Função para buscar cidades únicas e normalizadas
@@ -42,29 +90,42 @@ async function getCidadesUnicas() {
     const cidadesRaw = await prisma.candidatos.findMany({
       select: { cidadeCandidato: true },
       distinct: ['cidadeCandidato'],
-      // CORREÇÃO APLICADA AQUI
-      where: {
-        NOT: [
-          { cidadeCandidato: null },
-          { cidadeCandidato: '' }
+      where: { 
+        AND: [
+          { cidadeCandidato: { not: null } },
+          { cidadeCandidato: { not: '' } }
         ]
       },
       orderBy: { cidadeCandidato: 'asc' }
     });
 
-    // Normaliza e remove duplicatas
+    // Agrupa cidades similares mantendo a versão com melhor qualidade
     const cidadesMap = new Map<string, string>();
     
     cidadesRaw.forEach(({ cidadeCandidato }) => {
       if (cidadeCandidato) {
-        const normalized = normalizeCityName(cidadeCandidato);
-        if (normalized && !cidadesMap.has(normalized)) {
-          cidadesMap.set(normalized, cidadeCandidato);
+        const normalizedKey = normalizeForComparison(cidadeCandidato);
+        const currentCity = cidadesMap.get(normalizedKey);
+        
+        if (!currentCity) {
+          // Primeira ocorrência desta cidade
+          const capitalizedCity = capitalizeCityName(cidadeCandidato);
+          cidadesMap.set(normalizedKey, capitalizedCity);
+        } else {
+          // Já existe - compara a qualidade
+          const newCity = capitalizeCityName(cidadeCandidato);
+          const currentQuality = getCityNameQuality(currentCity);
+          const newQuality = getCityNameQuality(newCity);
+          
+          // Se a nova cidade tem melhor qualidade, substitui
+          if (newQuality > currentQuality) {
+            cidadesMap.set(normalizedKey, newCity);
+          }
         }
       }
     });
 
-    return Array.from(cidadesMap.keys()).sort();
+    return Array.from(cidadesMap.values()).sort();
   } catch (error) {
     console.error('Erro ao buscar cidades:', error);
     return [];
@@ -84,23 +145,53 @@ export default async function CandidatosPage({ searchParams }: CandidatosPagePro
   const cidadesDisponiveis = await getCidadesUnicas();
 
   // Constrói o filtro incluindo cidades
+  let cityFilter = {};
+  if (selectedCities.length > 0) {
+    // Busca todas as cidades do banco para fazer correspondência
+    const todasCidades = await prisma.candidatos.findMany({
+      select: { cidadeCandidato: true },
+      where: { 
+        AND: [
+          { cidadeCandidato: { not: null } },
+          { cidadeCandidato: { not: '' } }
+        ]
+      },
+      distinct: ['cidadeCandidato']
+    });
+
+    // Encontra todas as variações das cidades selecionadas
+    const cidadesParaBuscar = new Set<string>();
+    
+    selectedCities.forEach(selectedCity => {
+      const normalizedSelected = normalizeForComparison(selectedCity);
+      
+      todasCidades.forEach(({ cidadeCandidato }) => {
+        if (cidadeCandidato && normalizeForComparison(cidadeCandidato) === normalizedSelected) {
+          cidadesParaBuscar.add(cidadeCandidato);
+        }
+      });
+    });
+
+    if (cidadesParaBuscar.size > 0) {
+      cityFilter = {
+        cidadeCandidato: {
+          in: Array.from(cidadesParaBuscar)
+        }
+      };
+    }
+  }
+
   const filter: Prisma.CandidatosWhereInput = {
     ...(search && {
       OR: [
         { nomeCandidato: { contains: search, mode: Prisma.QueryMode.insensitive } },
         { emailCandidato: { contains: search, mode: Prisma.QueryMode.insensitive } },
+        { cpfCandidato: { contains: search, mode: Prisma.QueryMode.insensitive } },
       ]
     }),
     ...(vaga && { vagainteresseCandidato: { equals: vaga } }),
     ...(situacao && { situacaoCandidato: { equals: situacao } }),
-    ...(selectedCities.length > 0 && {
-      OR: selectedCities.map(city => ({
-        cidadeCandidato: {
-          contains: city,
-          mode: Prisma.QueryMode.insensitive
-        }
-      }))
-    }),
+    ...cityFilter,
   }
 
   const [candidatos, total] = await Promise.all([
@@ -216,13 +307,11 @@ export default async function CandidatosPage({ searchParams }: CandidatosPagePro
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Search className="h-5 w-5 text-blue-400" />
                   </div>
-                  <input
-                    type="text" 
-                    name="search" 
-                    defaultValue={search} 
-                    placeholder="Buscar por nome ou email..."
+                  <SearchInput
+                    name="search"
+                    defaultValue={search}
+                    placeholder="Buscar por nome, email ou CPF..."
                     className="block w-full pl-10 pr-3 py-3 border border-blue-200 rounded-lg leading-5 bg-white placeholder-blue-400 text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all"
-                    aria-label="Buscar candidatos"
                   />
                 </div>
 

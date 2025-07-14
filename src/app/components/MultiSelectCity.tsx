@@ -41,9 +41,20 @@ export default function MultiSelectCity({
     }
   }, [])
 
-  const filteredCities = availableCities.filter(city =>
-    city.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  // Função para normalizar texto para busca (remove acentos)
+  const normalizeForSearch = (text: string): string => {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+  }
+
+  const filteredCities = availableCities.filter(city => {
+    const normalizedCity = normalizeForSearch(city);
+    const normalizedSearch = normalizeForSearch(searchTerm);
+    return normalizedCity.includes(normalizedSearch);
+  })
 
   const handleCityToggle = (city: string) => {
     const newSelected = internalSelected.includes(city)
@@ -147,7 +158,7 @@ export default function MultiSelectCity({
                 placeholder="Buscar cidade..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-10 pr-3 py-2 border text-gray-500 border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 onClick={(e) => e.stopPropagation()}
               />
             </div>
