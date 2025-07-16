@@ -28,8 +28,14 @@ export async function GET(
         return NextResponse.json({ error: 'Nome de arquivo inválido.' }, { status: 400 });
     }
 
+        // LOG 1: Vamos ver qual é o diretório de trabalho atual
+    const cwd = process.cwd();
+    console.log(`[API CURRICULO] Diretório de trabalho (cwd): ${cwd}`)
+
     // Monta o caminho completo para o arquivo na pasta protegida
     const filePath = path.join(process.cwd(), 'uploads', 'curriculo', filename);
+    console.log(`[API CURRICULO] Tentando acessar o caminho completo: ${filePath}`);
+
 
     // Verifica se o arquivo existe
     await stat(filePath);
@@ -39,6 +45,8 @@ export async function GET(
     
     // Determina o tipo de conteúdo
     const contentType = getContentType(filename);
+        console.log(`[API CURRICULO] Arquivo encontrado! Enviando para o usuário.`);
+
 
     // Retorna o arquivo com os headers corretos
     return new NextResponse(fileBuffer, {
@@ -51,6 +59,8 @@ export async function GET(
     });
 
   } catch (error: unknown) { // CORREÇÃO: Trocado 'any' por 'unknown'
+        console.error('[API CURRICULO] Ocorreu um erro:', error); // Log do erro completo
+
     // CORREÇÃO: Adicionado um type guard para verificar a estrutura do erro
     if (error && typeof error === 'object' && 'code' in error) {
       // Se o erro for de "Arquivo Não Encontrado", retorna um 404 amigável
