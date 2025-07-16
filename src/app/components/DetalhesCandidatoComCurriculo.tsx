@@ -61,7 +61,7 @@ const InfoItem = ({ label, value, icon: Icon, link }: {
     link?: string;
 }) => {
     if (!value || value.trim() === '') return null;
-    
+
     const content = (
         <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
             {Icon && <Icon className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />}
@@ -167,8 +167,8 @@ export default function DetalhesCandidatoComCurriculo({ candidato }: DetalhesCan
                                     <p className="text-gray-600">Visualização completa com currículo</p>
                                 </div>
                             </div>
-                            <Link 
-                                href="/candidatos" 
+                            <Link
+                                href="/candidatos"
                                 className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all shadow-sm"
                             >
                                 <ChevronLeft className="w-4 h-4" />
@@ -193,7 +193,7 @@ export default function DetalhesCandidatoComCurriculo({ candidato }: DetalhesCan
                                                 <User className="w-10 h-10 text-white" />
                                             )}
                                         </div>
-                                        
+
                                         <div>
                                             <h2 className="text-2xl font-bold text-white mb-2">
                                                 {candidato.nomeCandidato || 'Nome não informado'}
@@ -238,28 +238,28 @@ export default function DetalhesCandidatoComCurriculo({ candidato }: DetalhesCan
 
                     {/* Layout Principal */}
                     <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                        
+
                         {/* Sidebar Esquerda - Informações do Candidato */}
                         <div className="xl:col-span-1 space-y-6">
-                            
+
                             {/* Informações de Contato */}
                             <InfoCard title="Contato" icon={Phone}>
                                 <div className="space-y-3">
-                                    <InfoItem 
-                                        label="Email" 
-                                        value={candidato.emailCandidato} 
+                                    <InfoItem
+                                        label="Email"
+                                        value={candidato.emailCandidato}
                                         icon={Mail}
                                         link={candidato.emailCandidato ? `mailto:${candidato.emailCandidato}` : undefined}
                                     />
-                                    <InfoItem 
-                                        label="Telefone Principal" 
-                                        value={candidato.telefoneCandidato} 
+                                    <InfoItem
+                                        label="Telefone Principal"
+                                        value={candidato.telefoneCandidato}
                                         icon={Phone}
                                         link={candidato.telefoneCandidato ? `https://wa.me/55${candidato.telefoneCandidato.replace(/\D/g, '')}` : undefined}
                                     />
-                                    <InfoItem 
-                                        label="Telefone Secundário" 
-                                        value={candidato.telefone2Candidato} 
+                                    <InfoItem
+                                        label="Telefone Secundário"
+                                        value={candidato.telefone2Candidato}
                                         icon={Phone}
                                     />
                                 </div>
@@ -270,20 +270,20 @@ export default function DetalhesCandidatoComCurriculo({ candidato }: DetalhesCan
                                         <p className="text-sm font-medium text-gray-600 mb-3">Redes Sociais</p>
                                         <div className="flex flex-wrap gap-2">
                                             {candidato.linkedinCandidato && (
-                                                <a href={candidato.linkedinCandidato} target="_blank" rel="noopener noreferrer" 
-                                                   className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                                                <a href={candidato.linkedinCandidato} target="_blank" rel="noopener noreferrer"
+                                                    className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
                                                     <Linkedin className="w-4 h-4" /> LinkedIn
                                                 </a>
                                             )}
                                             {candidato.facebookCandidato && (
-                                                <a href={candidato.facebookCandidato} target="_blank" rel="noopener noreferrer" 
-                                                   className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm">
+                                                <a href={candidato.facebookCandidato} target="_blank" rel="noopener noreferrer"
+                                                    className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm">
                                                     <Facebook className="w-4 h-4" /> Facebook
                                                 </a>
                                             )}
                                             {candidato.instagramCandidato && (
-                                                <a href={candidato.instagramCandidato} target="_blank" rel="noopener noreferrer" 
-                                                   className="flex items-center gap-2 px-3 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors text-sm">
+                                                <a href={candidato.instagramCandidato} target="_blank" rel="noopener noreferrer"
+                                                    className="flex items-center gap-2 px-3 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors text-sm">
                                                     <Instagram className="w-4 h-4" /> Instagram
                                                 </a>
                                             )}
@@ -340,8 +340,8 @@ export default function DetalhesCandidatoComCurriculo({ candidato }: DetalhesCan
                                     </h3>
                                 </div>
                                 <div className="p-6 space-y-3">
-                                    <Link 
-                                        href={`/candidatos/editar/${candidato.idCandidato}`} 
+                                    <Link
+                                        href={`/candidatos/editar/${candidato.idCandidato}`}
                                         className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-sm"
                                     >
                                         <Edit className="w-4 h-4" />
@@ -354,10 +354,10 @@ export default function DetalhesCandidatoComCurriculo({ candidato }: DetalhesCan
 
                         {/* Área Principal - Currículo e Observações */}
                         <div className="xl:col-span-2 space-y-8">
-                            
+
                             {/* Visualizador de Currículo */}
-                            <InfoCard title="Currículo" icon={Eye} className="h-[842px]">
-                                <div className="h-full w-full">
+                            <InfoCard title="Currículo" icon={Eye} className="min-h-[1200px]">
+                                <div className="h-full w-full min-h-[1150px]">
                                     <CurriculoViewer url={candidato.curriculoUrl} />
                                 </div>
                             </InfoCard>
@@ -446,9 +446,9 @@ export default function DetalhesCandidatoComCurriculo({ candidato }: DetalhesCan
                                 </div>
                                 <div className="p-6">
                                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                                        <button 
-                                            disabled={isPending} 
-                                            onClick={() => atualizarStatus('Aprovado')} 
+                                        <button
+                                            disabled={isPending}
+                                            onClick={() => atualizarStatus('Aprovado')}
                                             className="flex-1 sm:flex-none inline-flex items-center justify-center gap-3 px-8 py-4 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all disabled:bg-green-400 disabled:cursor-wait shadow-lg hover:shadow-xl"
                                         >
                                             <CheckCircle className="w-5 h-5" />
@@ -456,9 +456,9 @@ export default function DetalhesCandidatoComCurriculo({ candidato }: DetalhesCan
                                                 {isPending && statusAtualizando === 'Aprovado' ? 'Processando...' : 'Aprovar Candidato'}
                                             </span>
                                         </button>
-                                        <button 
-                                            disabled={isPending} 
-                                            onClick={() => atualizarStatus('Reprovado')} 
+                                        <button
+                                            disabled={isPending}
+                                            onClick={() => atualizarStatus('Reprovado')}
                                             className="flex-1 sm:flex-none inline-flex items-center justify-center gap-3 px-8 py-4 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all disabled:bg-red-400 disabled:cursor-wait shadow-lg hover:shadow-xl"
                                         >
                                             <XCircle className="w-5 h-5" />

@@ -6,7 +6,10 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "setup": "node scripts/setup-directories.js",
+    "build:production": "npm run setup && npm run build",
+    "deploy": "npm run build:production && npm start"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.9.1",

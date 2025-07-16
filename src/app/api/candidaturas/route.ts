@@ -28,45 +28,59 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Currículo é obrigatório.' }, { status: 400 });
     }
 
-    // 1. Validação de Tamanho (ex: 5MB)
+    // 1. Validação de Tamanho (5MB)
     const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 Megabytes
     if (curriculoFile.size > MAX_FILE_SIZE) {
         return NextResponse.json({ error: 'Arquivo muito grande. O limite é 5MB.' }, { status: 400 });
     }
 
-    // 2. Validação de Tipo (MIME Type)
-    const ALLOWED_MIME_TYPES = [
-        'application/pdf'
-    ];
+    // 2. Validação de Tipo (APENAS PDF)
+    const ALLOWED_MIME_TYPES = ['application/pdf'];
     if (!ALLOWED_MIME_TYPES.includes(curriculoFile.type)) {
-        return NextResponse.json({ error: 'Formato de arquivo inválido. Apenas PDF são permitidos.' }, { status: 400 });
+        return NextResponse.json({ error: 'Formato de arquivo inválido. Apenas arquivos PDF são permitidos.' }, { status: 400 });
+    }
+
+    // 3. Validação adicional da extensão do arquivo
+    const fileExtension = path.extname(curriculoFile.name).toLowerCase();
+    if (fileExtension !== '.pdf') {
+        return NextResponse.json({ error: 'Apenas arquivos com extensão .pdf são permitidos.' }, { status: 400 });
     }
     // --- FIM DA VALIDAÇÃO ---
 
+    // 4. Criar nome único para o arquivo
+    const timestamp = Date.now();
+    const sanitizedCpf = cpfCandidato.replace(/\D/g, ''); // Remove caracteres especiais do CPF
+    const filename = `curriculo-${sanitizedCpf}-${timestamp}.pdf`;
+    
+    // 5. Definir diretório de upload
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'curriculos');
 
-    // 3. Salvar o arquivo do currículo no servidor
-    const buffer = Buffer.from(await curriculoFile.arrayBuffer());
-    const filename = `curriculo-${Date.now()}${path.extname(curriculoFile.name)}`;
-    const uploadDir = path.join(process.cwd(), 'uploads', 'curriculo');
-
+    // 6. Criar diretório se não existir
     try {
       await stat(uploadDir);
     } catch (error: unknown) {
-      // Correção do 'any' para 'unknown' com type guard
       if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
         await mkdir(uploadDir, { recursive: true });
+        console.log(`[UPLOAD] Diretório criado: ${uploadDir}`);
       } else {
+        console.error('[UPLOAD] Erro ao verificar diretório:', error);
         throw error;
       }
     }
 
-    await writeFile(path.join(uploadDir, filename), buffer);
-    const curriculoUrl = `/curriculo/${filename}`;
+    // 7. Salvar arquivo
+    const buffer = Buffer.from(await curriculoFile.arrayBuffer());
+    const filePath = path.join(uploadDir, filename);
+    
+    await writeFile(filePath, buffer);
+    console.log(`[UPLOAD] Arquivo salvo em: ${filePath}`);
 
-    // 4. Criar o registro do candidato no banco de dados
+    // 8. URL relativa para salvar no banco (será acessível via /uploads/curriculos/filename.pdf)
+    const curriculoUrl = `/uploads/curriculos/${filename}`;
+
+    // 9. Criar o registro do candidato no banco de dados
     const novoCandidato = await prisma.candidatos.create({
       data: {
-        // ... (todos os seus campos de dados aqui)
         nomeCandidato,
         cpfCandidato,
         emailCandidato,
@@ -78,16 +92,22 @@ export async function POST(req: NextRequest) {
         bairroCandidato,
         cidadeCandidato,
         estadoCandidato,
-        // ... etc
         curriculoUrl,
         situacaoCandidato: 'Em análise',
       }
     });
 
-    return NextResponse.json(novoCandidato, { status: 201 });
+    console.log(`[UPLOAD] Candidato criado com ID: ${novoCandidato.idCandidato}`);
+    
+    return NextResponse.json({
+      ...novoCandidato,
+      message: 'Candidatura criada com sucesso!'
+    }, { status: 201 });
 
   } catch (error) {
-    console.error('Erro ao criar candidatura:', error);
-    return NextResponse.json({ error: 'Falha ao criar candidatura.' }, { status: 500 });
+    console.error('[UPLOAD] Erro ao criar candidatura:', error);
+    return NextResponse.json({ 
+      error: 'Falha ao criar candidatura. Tente novamente.' 
+    }, { status: 500 });
   }
 }

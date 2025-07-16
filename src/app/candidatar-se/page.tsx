@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Toaster, toast } from 'react-hot-toast';
-import { User, FileText, Mail, Phone, MapPin, Briefcase, Loader2, UploadCloud, CheckCircle, ArrowRight } from 'lucide-react';
+import { User, FileText, Mail, Phone, MapPin, Briefcase, Loader2, UploadCloud, CheckCircle, ArrowRight, AlertTriangle } from 'lucide-react';
 
 // Funções de máscara personalizadas
 const masks = {
@@ -102,6 +102,44 @@ export default function CandidatarSePage() {
     }
   }, [formData.cep]);
 
+  const validateFile = (file: File): string | null => {
+    // Validar tipo MIME
+    if (file.type !== 'application/pdf') {
+      return 'Apenas arquivos PDF são aceitos.';
+    }
+    
+    // Validar extensão
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      return 'O arquivo deve ter extensão .pdf';
+    }
+    
+    // Validar tamanho (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      return 'O arquivo deve ter no máximo 5MB.';
+    }
+    
+    return null;
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setCurriculo(null);
+      return;
+    }
+    
+    const error = validateFile(file);
+    if (error) {
+      toast.error(error);
+      e.target.value = ''; // Limpar input
+      setCurriculo(null);
+      return;
+    }
+    
+    setCurriculo(file);
+    toast.success('Arquivo PDF selecionado com sucesso!');
+  };
+
   const handleSubmit = useCallback(async (event: React.FormEvent) => {
     event.preventDefault();
     
@@ -115,9 +153,10 @@ export default function CandidatarSePage() {
       return;
     }
 
-    // Validação de tamanho do arquivo (5MB)
-    if (curriculo.size > 5 * 1024 * 1024) {
-      toast.error("O arquivo deve ter no máximo 5MB.");
+    // Validação final do arquivo
+    const fileError = validateFile(curriculo);
+    if (fileError) {
+      toast.error(fileError);
       return;
     }
     
@@ -135,12 +174,12 @@ export default function CandidatarSePage() {
         body: submissionData,
       });
 
+      const responseData = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Falha ao enviar candidatura.');
+        throw new Error(responseData.error || 'Falha ao enviar candidatura.');
       }
       
-      await response.json(); // Consumir resposta sem armazenar
       toast.success('Candidatura enviada com sucesso! Boa sorte!');
       
       // Reset form
@@ -150,10 +189,12 @@ export default function CandidatarSePage() {
       });
       setCurriculo(null);
       setDeclaracao(false);
+      setCurrentStep(1);
       
       setTimeout(() => router.push('/'), 2000); 
 
     } catch (error: unknown) {
+      console.error('Erro no envio:', error);
       if (error instanceof Error) {
         toast.error(`Erro: ${error.message}`);
       } else {
@@ -171,7 +212,7 @@ export default function CandidatarSePage() {
       case 2:
         return !!(formData.cep && formData.rua && formData.numero && formData.bairro && formData.cidade && formData.estado);
       case 3:
-        return !!formData.cargo;
+        return !!(formData.cargo && curriculo);
       default:
         return false;
     }
@@ -462,7 +503,7 @@ export default function CandidatarSePage() {
               <div className={`space-y-6 transition-all duration-500 ${currentStep === 3 ? 'block' : 'hidden'}`}>
                 <div className="text-center mb-8">
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">Vaga & Currículo</h2>
-                  <p className="text-gray-600">Escolha a vaga e anexe seu currículo</p>
+                  <p className="text-gray-600">Escolha a vaga e anexe seu currículo em PDF</p>
                 </div>
 
                 <div className="space-y-6">
@@ -486,22 +527,39 @@ export default function CandidatarSePage() {
                   </div>
 
                   <div className="group">
-                    <label className="block text-sm font-medium text-gray-700 mb-3">Currículo (PDF)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Currículo (APENAS PDF)
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    
+                    {/* Aviso sobre formato */}
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-amber-800">Importante:</p>
+                          <p className="text-sm text-amber-700">
+                            Apenas arquivos PDF são aceitos. Máximo 5MB.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
                     <div className="relative">
                       <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors duration-200 bg-gray-50 hover:bg-blue-50">
                         <UploadCloud className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                         <div className="space-y-2">
                           <div className="flex justify-center">
                             <label htmlFor="file-upload" className="cursor-pointer bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200">
-                              <span>Escolher arquivo</span>
+                              <span>Escolher arquivo PDF</span>
                               <input 
                                 id="file-upload" 
                                 name="curriculo" 
                                 type="file" 
                                 className="sr-only" 
                                 required 
-                                onChange={(e) => setCurriculo(e.target.files ? e.target.files[0] : null)} 
-                                accept="application/pdf" 
+                                onChange={handleFileChange} 
+                                accept="application/pdf,.pdf" 
                               />
                             </label>
                           </div>
@@ -512,7 +570,7 @@ export default function CandidatarSePage() {
                                 {curriculo.name}
                               </p>
                               <p className="text-xs text-green-600 mt-1">
-                                {(curriculo.size / 1024 / 1024).toFixed(2)} MB
+                                {(curriculo.size / 1024 / 1024).toFixed(2)} MB - PDF válido
                               </p>
                             </div>
                           ) : (
@@ -550,7 +608,7 @@ export default function CandidatarSePage() {
                   </button>
                   <button 
                     type="submit" 
-                    disabled={!declaracao || !curriculo || isLoading} 
+                    disabled={!declaracao || !curriculo || isLoading || !isStepValid(3)} 
                     className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-8 py-3 rounded-xl font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2 min-w-[200px] justify-center"
                   >
                     {isLoading ? (
