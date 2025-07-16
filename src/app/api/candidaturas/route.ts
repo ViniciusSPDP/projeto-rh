@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     // 3. Salvar o arquivo do currículo no servidor
     const buffer = Buffer.from(await curriculoFile.arrayBuffer());
     const filename = `curriculo-${Date.now()}${path.extname(curriculoFile.name)}`;
-    const uploadDir = path.join(process.cwd(), 'public', 'curriculo');
+    const uploadDir = path.join(process.cwd(), 'uploads', 'curriculo');
 
     try {
       await stat(uploadDir);
