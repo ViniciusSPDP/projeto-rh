@@ -1,5 +1,5 @@
 {
-  "disparoAutomatico": true,
+  "disparoAutomatico": false,
   "templates": {
     "CONTRATADO": {
       "mensagem": "{{nomeCandidato}}, você foi aprovado para a vaga {{titulo}} !!!"

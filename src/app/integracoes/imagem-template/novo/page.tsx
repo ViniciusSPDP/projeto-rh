@@ -19,8 +19,8 @@ import {
   Info
 } from 'lucide-react';
 
-// CARREGAMENTO DINÂMICO: Importa o editor apenas no lado do cliente
-const TemplateEditor = dynamic(() => import('@/app/components/TemplateEditor'), {
+// CARREGAMENTO DINÂMICO: Importa o wrapper do editor apenas no lado do cliente
+const TemplateEditorWrapper = dynamic(() => import('@/app/components/TemplateEditorWrapper'), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center h-96 bg-gray-50 rounded-xl">
@@ -457,7 +457,7 @@ export default function NovoTemplateDeImagemPage() {
         {/* Área do Editor (Centro/Direita) */}
         <div className="flex-1 p-8 flex items-center justify-center overflow-auto">
           <div className="bg-white rounded-xl shadow-lg p-6">
-            <TemplateEditor
+            <TemplateEditorWrapper
               backgroundImage={backgroundImage}
               elements={elements}
               selectedElementId={selectedElementId}

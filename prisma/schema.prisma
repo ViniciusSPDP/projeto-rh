@@ -67,6 +67,7 @@ model Candidatos {
   situacaoCandidato                 String?
   opcionalCandidato                 String?
   observacaoCandidato               String?
+  curriculoUrl              String?
   observacaoUpdatedAt         DateTime?
 
   vagas VagaCandidato[]

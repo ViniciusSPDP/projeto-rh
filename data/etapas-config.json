@@ -1,5 +1,5 @@
 {
-  "disparoPorEtapaAtivado": true,
+  "disparoPorEtapaAtivado": false,
   "templatesPorEtapa": {
     "Em Recrutamento": {
       "ativo": true,

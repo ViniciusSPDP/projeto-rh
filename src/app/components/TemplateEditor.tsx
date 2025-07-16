@@ -2,8 +2,9 @@
 
 import { Stage, Layer, Image as KonvaImage, Text as KonvaText, Transformer, Rect } from 'react-konva';
 import Konva from 'konva';
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { ZoomIn, ZoomOut, RotateCcw, Maximize2 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 
 // Definindo os tipos para as props e elementos
 interface TextElement {
@@ -27,7 +28,7 @@ interface TemplateEditorProps {
   previewMode?: boolean;
 }
 
-export default function TemplateEditor({
+function TemplateEditor({
   backgroundImage,
   elements,
   selectedElementId,
@@ -44,6 +45,22 @@ export default function TemplateEditor({
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
+
+  // Função handleFitToScreen usando useCallback
+  const handleFitToScreen = useCallback(() => {
+    if (!backgroundImage || !containerSize.width || !containerSize.height) return;
+
+    const scaleX = (containerSize.width - 100) / stageSize.width;
+    const scaleY = (containerSize.height - 100) / stageSize.height;
+    const newScale = Math.min(scaleX, scaleY, 1);
+    
+    setScale(newScale);
+    
+    // Centraliza
+    const x = (containerSize.width - stageSize.width * newScale) / 2;
+    const y = (containerSize.height - stageSize.height * newScale) / 2;
+    setPosition({ x: Math.max(0, x), y: Math.max(0, y) });
+  }, [backgroundImage, containerSize.width, containerSize.height, stageSize.width, stageSize.height]);
 
   // Atualiza o tamanho do container
   useEffect(() => {
@@ -69,7 +86,7 @@ export default function TemplateEditor({
       // Auto-fit na primeira vez
       handleFitToScreen();
     }
-  }, [backgroundImage, containerSize]);
+  }, [backgroundImage, handleFitToScreen]);
 
   // Atualiza o transformer quando um elemento é selecionado
   useEffect(() => {
@@ -146,21 +163,6 @@ export default function TemplateEditor({
   const handleResetZoom = () => {
     setScale(1);
     setPosition({ x: 0, y: 0 });
-  };
-
-  const handleFitToScreen = () => {
-    if (!backgroundImage || !containerSize.width || !containerSize.height) return;
-
-    const scaleX = (containerSize.width - 100) / stageSize.width;
-    const scaleY = (containerSize.height - 100) / stageSize.height;
-    const newScale = Math.min(scaleX, scaleY, 1);
-    
-    setScale(newScale);
-    
-    // Centraliza
-    const x = (containerSize.width - stageSize.width * newScale) / 2;
-    const y = (containerSize.height - stageSize.height * newScale) / 2;
-    setPosition({ x: Math.max(0, x), y: Math.max(0, y) });
   };
 
   // Função para lidar com o wheel (zoom com scroll)
@@ -388,4 +390,28 @@ export default function TemplateEditor({
       )}
     </div>
   );
+}
+
+// Exporta o componente com dynamic import para evitar problemas de SSR
+export default dynamic(() => Promise.resolve(TemplateEditor), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex items-center justify-center bg-gray-50 rounded-xl">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+        <p className="text-gray-600">Carregando editor...</p>
+      </div>
+    </div>
+  )
+});
+
+// Verificação se estamos no browser antes de usar Konva
+if (typeof window !== 'undefined') {
+  // Força o Konva a usar apenas funcionalidades do browser
+  import('konva').then((Konva) => {
+    // Configurações específicas do Konva para produção
+    if (Konva.default) {
+      Konva.default.pixelRatio = 1;
+    }
+  });
 }
