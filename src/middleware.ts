@@ -11,6 +11,6 @@ export const config = {
      */
 
     // --- ALTERAÇÃO AQUI: Adicionamos '|$' no final da lista de exceções ---
-    '/((?!api|_next/static|_next/image|favicon.ico|login|banco-de-talentos|obrigado|vagas/\\d+/formulario|$).*)'
+    '/((?!api|_next/static|_next/image|favicon.ico|login|banco-de-talentos|candidatar-se|obrigado|vagas/\\d+/formulario|$).*)'
   ],
 }

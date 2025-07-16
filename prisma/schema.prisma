@@ -67,6 +67,7 @@ model Candidatos {
   situacaoCandidato                 String?
   opcionalCandidato                 String?
   observacaoCandidato               String?
+  curriculoUrl              String?
   observacaoUpdatedAt         DateTime?
 
   vagas VagaCandidato[]
@@ -121,4 +122,17 @@ model ObservacaoHistorico {
   candidato       Candidatos @relation(fields: [candidatoId], references: [idCandidato], onDelete: Cascade)
   
   @@index([candidatoId])
+}
+
+model ImageTemplate {
+  id                String    @id @default(cuid())
+  name              String    // Nome do template, ex: "Post para Instagram"
+  backgroundImageUrl String    // URL da imagem de fundo que o usuário subiu
+  
+  // JSON para guardar um array de elementos de texto
+  // Cada elemento terá sua posição, estilo e conteúdo
+  elements          Json
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 }
