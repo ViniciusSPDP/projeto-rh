@@ -1,9 +1,11 @@
+//src/app/candidatar-se/page.tsx (COM ANALYTICS)
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Toaster, toast } from 'react-hot-toast';
 import { User, FileText, Mail, Phone, MapPin, Briefcase, Loader2, UploadCloud, CheckCircle, ArrowRight, AlertTriangle } from 'lucide-react';
+import { useStepAnalytics } from '@/hooks/useAnalytics';
 
 // Funções de máscara personalizadas
 const masks = {
@@ -51,7 +53,46 @@ export default function CandidatarSePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  // 🎯 ANALYTICS: Implementar tracking por step
+  const analytics = useStepAnalytics('upload_curriculo', currentStep);
+  const [camposPreenchidos, setCamposPreenchidos] = useState<Set<string>>(new Set());
+  const [tempoInicioStep, setTempoInicioStep] = useState<number>(Date.now());
+
+  // 📊 ANALYTICS: Track mudanças de step
+  const handleStepChange = useCallback((novoStep: number) => {
+    const tempoNaEtapa = Date.now() - tempoInicioStep;
+    
+    if (novoStep > currentStep) {
+      // Avançando - registrar preenchimento da etapa atual
+      const etapas = ['step_1', 'step_2', 'step_3'] as const;
+      analytics.trackPreenchimento(etapas[currentStep - 1], {
+        etapaCompletada: currentStep,
+        proximaEtapa: novoStep,
+        tempoNaEtapa,
+        camposPreenchidos: camposPreenchidos.size,
+        direcao: 'avancar'
+      });
+    } else if (novoStep < currentStep) {
+      // Voltando - registrar navegação reversa
+      analytics.track({
+        evento: 'preenchimento',
+        etapa: `step_${currentStep}` as any,
+        dadosExtra: {
+          direcao: 'voltar',
+          etapaOrigem: currentStep,
+          etapaDestino: novoStep,
+          tempoNaEtapa
+        }
+      });
+    }
+    
+    setCurrentStep(novoStep);
+    setTempoInicioStep(Date.now());
+    window.scrollTo(0, 0);
+  }, [currentStep, analytics, camposPreenchidos, tempoInicioStep]);
+
+  // 📝 ANALYTICS: Track preenchimento de campos
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     let formattedValue = value;
     
@@ -65,11 +106,38 @@ export default function CandidatarSePage() {
     }
     
     setFormData(prev => ({ ...prev, [name]: formattedValue }));
-  };
 
+    // 🎯 ANALYTICS: Track preenchimento de campos importantes
+    if (value.trim().length > 0 && !camposPreenchidos.has(name)) {
+      setCamposPreenchidos(prev => new Set([...prev, name]));
+      
+      // Marcos importantes do formulário
+      const marcos = {
+        nome: 'primeiro_campo_preenchido',
+        email: 'contato_email_preenchido',
+        telefone: 'dados_contato_completos',
+        cargo: 'vaga_selecionada',
+        cep: 'endereco_iniciado'
+      };
+      
+      if (marcos[name as keyof typeof marcos]) {
+        const etapas = ['step_1', 'step_2', 'step_3'] as const;
+        analytics.trackPreenchimento(etapas[currentStep - 1], {
+          marco: marcos[name as keyof typeof marcos],
+          campo: name,
+          totalCampos: camposPreenchidos.size + 1,
+          stepAtual: currentStep
+        });
+      }
+    }
+  }, [analytics, currentStep, camposPreenchidos]);
+
+  // 🌍 ANALYTICS: Track busca de CEP
   const handleCepBlur = useCallback(async () => {
     const cepLimpo = formData.cep.replace(/\D/g, '');
     if (cepLimpo.length !== 8) return;
+    
+    const inicioConsulta = Date.now();
     
     try {
       const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`, {
@@ -84,6 +152,8 @@ export default function CandidatarSePage() {
       }
       
       const data = await response.json();
+      const tempoConsulta = Date.now() - inicioConsulta;
+      
       if (!data.erro) {
         setFormData(prev => ({
           ...prev,
@@ -93,14 +163,39 @@ export default function CandidatarSePage() {
           estado: data.uf || '',
         }));
         toast.success('CEP encontrado!');
+        
+        // 🎯 ANALYTICS: CEP encontrado com sucesso
+        analytics.trackPreenchimento('step_2', {
+          evento_especial: 'cep_encontrado',
+          cep: cepLimpo,
+          cidade: data.localidade,
+          estado: data.uf,
+          tempoConsulta,
+          preenchimentoAutomatico: true
+        });
       } else {
         toast.error('CEP não encontrado.');
+        
+        // 🎯 ANALYTICS: CEP não encontrado
+        analytics.trackAbandono('step_2', {
+          motivo: 'cep_nao_encontrado',
+          cep: cepLimpo,
+          tempoConsulta
+        });
       }
     } catch (error) {
       console.error("Erro ao buscar CEP:", error);
       toast.error('Não foi possível buscar o CEP. Verifique sua conexão.');
+      
+      // 🎯 ANALYTICS: Erro na consulta do CEP
+      analytics.trackAbandono('step_2', {
+        motivo: 'erro_consulta_cep',
+        cep: cepLimpo,
+        erro: error instanceof Error ? error.message : 'Erro desconhecido',
+        tempoConsulta: Date.now() - inicioConsulta
+      });
     }
-  }, [formData.cep]);
+  }, [formData.cep, analytics]);
 
   const validateFile = (file: File): string | null => {
     // Validar tipo MIME
@@ -121,7 +216,8 @@ export default function CandidatarSePage() {
     return null;
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 📎 ANALYTICS: Track upload de arquivo
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) {
       setCurriculo(null);
@@ -131,32 +227,66 @@ export default function CandidatarSePage() {
     const error = validateFile(file);
     if (error) {
       toast.error(error);
-      e.target.value = ''; // Limpar input
+      e.target.value = '';
       setCurriculo(null);
+      
+      // 🎯 ANALYTICS: Erro no upload
+      analytics.trackAbandono('step_3', {
+        motivo: 'arquivo_invalido',
+        erro: error,
+        nomeArquivo: file.name,
+        tipoArquivo: file.type,
+        tamanhoArquivo: file.size,
+        tentativaUpload: true
+      });
       return;
     }
     
     setCurriculo(file);
     toast.success('Arquivo PDF selecionado com sucesso!');
-  };
+    
+    // 🎯 ANALYTICS: Upload bem-sucedido
+    analytics.trackPreenchimento('step_3', {
+      evento_especial: 'curriculo_anexado',
+      nomeArquivo: file.name,
+      tamanhoArquivo: file.size,
+      tipoArquivo: file.type,
+      tamanhoMB: (file.size / 1024 / 1024).toFixed(2)
+    });
+  }, [analytics]);
 
+  // 📤 ANALYTICS: Track envio do formulário
   const handleSubmit = useCallback(async (event: React.FormEvent) => {
     event.preventDefault();
     
+    const inicioEnvio = Date.now();
+    
     if (!declaracao) {
       toast.error("Você precisa concordar com a declaração para continuar.");
+      analytics.trackAbandono('step_3', { 
+        motivo: 'declaracao_nao_aceita',
+        camposPreenchidos: camposPreenchidos.size 
+      });
       return;
     }
     
     if (!curriculo) {
       toast.error("Anexar o currículo é obrigatório.");
+      analytics.trackAbandono('step_3', { 
+        motivo: 'curriculo_nao_anexado',
+        camposPreenchidos: camposPreenchidos.size 
+      });
       return;
     }
 
-    // Validação final do arquivo
     const fileError = validateFile(curriculo);
     if (fileError) {
       toast.error(fileError);
+      analytics.trackAbandono('step_3', { 
+        motivo: 'arquivo_invalido_final', 
+        erro: fileError,
+        camposPreenchidos: camposPreenchidos.size 
+      });
       return;
     }
     
@@ -175,10 +305,26 @@ export default function CandidatarSePage() {
       });
 
       const responseData = await response.json();
+      const tempoEnvio = Date.now() - inicioEnvio;
 
       if (!response.ok) {
         throw new Error(responseData.error || 'Falha ao enviar candidatura.');
       }
+      
+      // 🎯 ANALYTICS: Envio bem-sucedido - CONVERSÃO!
+      analytics.trackEnvio({
+        candidatoId: responseData.idCandidato,
+        cargo: formData.cargo,
+        cidade: formData.cidade,
+        estado: formData.estado,
+        tamanhoArquivo: curriculo.size,
+        nomeArquivo: curriculo.name,
+        totalCamposPreenchidos: camposPreenchidos.size,
+        tempoEnvio,
+        tempoTotalFormulario: Date.now() - tempoInicioStep,
+        stepsFinalizado: 3,
+        sucesso: true
+      });
       
       toast.success('Candidatura enviada com sucesso! Boa sorte!');
       
@@ -191,10 +337,24 @@ export default function CandidatarSePage() {
       setDeclaracao(false);
       setCurrentStep(1);
       
-      setTimeout(() => router.push('/'), 2000); 
+      setTimeout(() => router.push('/obrigado'), 2000); 
 
     } catch (error: unknown) {
       console.error('Erro no envio:', error);
+      
+      // 🎯 ANALYTICS: Erro no envio
+      analytics.trackAbandono('step_3', {
+        motivo: 'erro_envio_servidor',
+        erro: error instanceof Error ? error.message : 'Erro desconhecido',
+        camposPreenchidos: camposPreenchidos.size,
+        tempoEnvio: Date.now() - inicioEnvio,
+        dadosFormulario: {
+          temCurriculo: !!curriculo,
+          cargo: formData.cargo,
+          cidade: formData.cidade
+        }
+      });
+      
       if (error instanceof Error) {
         toast.error(`Erro: ${error.message}`);
       } else {
@@ -203,7 +363,49 @@ export default function CandidatarSePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [formData, curriculo, declaracao, router]);
+  }, [formData, curriculo, declaracao, router, analytics, camposPreenchidos, tempoInicioStep]);
+
+  // 🚪 ANALYTICS: Track abandono quando sai da página
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (currentStep > 1 && !isLoading && camposPreenchidos.size > 0) {
+        // Usar sendBeacon para garantir que o evento seja enviado
+        navigator.sendBeacon('/api/analytics/track', JSON.stringify({
+          sessionId: analytics.sessionId,
+          tipoForm: 'upload_curriculo',
+          evento: 'abandono',
+          etapa: `step_${currentStep}`,
+          dadosExtra: {
+            motivoAbandonoSuspeito: 'fechou_navegador',
+            etapaAtual: currentStep,
+            camposPreenchidos: camposPreenchidos.size,
+            tempoNaEtapa: Date.now() - tempoInicioStep,
+            progresso: (currentStep / 3) * 100
+          }
+        }));
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [currentStep, isLoading, analytics, camposPreenchidos, tempoInicioStep]);
+
+  // 📊 ANALYTICS: Auto-save e tracking de progresso
+  useEffect(() => {
+    const intervalo = setInterval(() => {
+      if (camposPreenchidos.size > 0) {
+        const etapas = ['step_1', 'step_2', 'step_3'] as const;
+        analytics.trackPreenchimento(etapas[currentStep - 1], {
+          autoSave: true,
+          progresso: (camposPreenchidos.size / 11) * 100, // 11 campos totais
+          tempoDecorrido: Date.now() - tempoInicioStep,
+          engagement: 'ativo'
+        });
+      }
+    }, 45000); // A cada 45 segundos
+
+    return () => clearInterval(intervalo);
+  }, [analytics, currentStep, camposPreenchidos, tempoInicioStep]);
 
   const isStepValid = (step: number): boolean => {
     switch (step) {
@@ -250,6 +452,14 @@ export default function CandidatarSePage() {
           },
         }}
       />
+
+      {/* 🔍 DEBUG: Analytics info - remover em produção */}
+      <div className="fixed bottom-4 right-4 bg-black text-white p-2 rounded text-xs z-50 opacity-75">
+        <div>📊 Session: {analytics.sessionId.slice(-8)}</div>
+        <div>📍 Step: {currentStep}/3</div>
+        <div>✅ Campos: {camposPreenchidos.size}</div>
+        <div>📝 Tipo: upload_curriculo</div>
+      </div>
 
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
         {/* Header with gradient */}
@@ -375,7 +585,7 @@ export default function CandidatarSePage() {
                 <div className="flex justify-end">
                   <button
                     type="button"
-                    onClick={() => setCurrentStep(2)}
+                    onClick={() => handleStepChange(2)}
                     disabled={!isStepValid(1)}
                     className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-xl font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
                   >
@@ -483,14 +693,14 @@ export default function CandidatarSePage() {
                 <div className="flex justify-between">
                   <button
                     type="button"
-                    onClick={() => setCurrentStep(1)}
+                    onClick={() => handleStepChange(1)}
                     className="bg-gray-200 text-gray-700 px-8 py-3 rounded-xl font-medium hover:bg-gray-300 transition-all duration-200"
                   >
                     Voltar
                   </button>
                   <button
                     type="button"
-                    onClick={() => setCurrentStep(3)}
+                    onClick={() => handleStepChange(3)}
                     disabled={!isStepValid(2)}
                     className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-xl font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
                   >
@@ -601,7 +811,7 @@ export default function CandidatarSePage() {
                 <div className="flex justify-between pt-4">
                   <button
                     type="button"
-                    onClick={() => setCurrentStep(2)}
+                    onClick={() => handleStepChange(2)}
                     className="bg-gray-200 text-gray-700 px-8 py-3 rounded-xl font-medium hover:bg-gray-300 transition-all duration-200"
                   >
                     Voltar
