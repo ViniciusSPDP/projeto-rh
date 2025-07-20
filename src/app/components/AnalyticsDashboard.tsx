@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+"use client";
+import React, { useState, useEffect, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { TrendingUp, Users, FileText, Send, Clock, AlertTriangle } from 'lucide-react';
 
@@ -60,24 +61,31 @@ export default function AnalyticsDashboard() {
   const [periodo, setPeriodo] = useState<'hoje' | 'semana' | 'mes' | 'total'>('mes');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    carregarDados();
-  }, [periodo]);
-
-  const carregarDados = async () => {
+  const carregarDados = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/analytics/stats?periodo=${periodo}`);
       if (response.ok) {
         const data = await response.json();
         setDados(data);
+      } else {
+        // Trata casos em que a API retorna um erro mas não gera uma exceção no fetch
+        console.error('Falha ao buscar dados da API:', response.statusText);
+        setDados(null);
       }
     } catch (error) {
       console.error('Erro ao carregar analytics:', error);
+      setDados(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, [periodo]);
+
+  useEffect(() => {
+    carregarDados();
+  }, [carregarDados]);
+
+  // CORREÇÃO: A declaração duplicada da função 'carregarDados' foi removida daqui.
 
   if (loading) {
     return (
@@ -95,7 +103,7 @@ export default function AnalyticsDashboard() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <p className="text-gray-600">Erro ao carregar dados</p>
+          <p className="text-gray-600">Erro ao carregar dados. Tente atualizar a página.</p>
         </div>
       </div>
     );
@@ -225,7 +233,8 @@ export default function AnalyticsDashboard() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, value }) => `${name}: ${value.toFixed(1)}%`}
+                  // CORREÇÃO: Usamos (value ?? 0) para fornecer 0 como padrão se 'value' for undefined.
+                  label={({ name, value }) => `${name}: ${(value ?? 0).toFixed(1)}%`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"

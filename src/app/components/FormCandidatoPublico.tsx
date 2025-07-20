@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, ChangeEvent, FormEvent } from 'react'
+import { useState, ChangeEvent, FormEvent, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import {
@@ -9,6 +9,8 @@ import {
 import { IMaskInput } from 'react-imask'
 import toast from 'react-hot-toast'
 import { Prisma } from '@prisma/client'
+// CORREÇÃO: O import de 'useAnalytics' foi removido pois não era utilizado.
+import { useStepAnalytics } from '@/hooks/useAnalytics'
 
 // --- Tipos e Constantes ---
 
@@ -29,12 +31,12 @@ interface ExperienciaFieldsProps {
 }
 
 const TABS_CONFIG = [
-  { id: 'pessoal', label: 'Dados Pessoais', icon: Contact },
-  { id: 'documentos', label: 'Documentos e Redes', icon: FileText },
-  { id: 'endereco', label: 'Endereço', icon: MapPin },
-  { id: 'formacao', label: 'Formação', icon: GraduationCap },
-  { id: 'experiencia', label: 'Experiência', icon: Briefcase },
-  { id: 'outros', label: 'Finalização', icon: CheckCircle },
+  { id: 'pessoal', label: 'Dados Pessoais', icon: Contact, etapa: 'dados_pessoais' },
+  { id: 'documentos', label: 'Documentos e Redes', icon: FileText, etapa: 'step_2' },
+  { id: 'endereco', label: 'Endereço', icon: MapPin, etapa: 'endereco' },
+  { id: 'formacao', label: 'Formação', icon: GraduationCap, etapa: 'step_3' },
+  { id: 'experiencia', label: 'Experiência', icon: Briefcase, etapa: 'profissional' },
+  { id: 'outros', label: 'Finalização', icon: CheckCircle, etapa: 'step_3' },
 ] as const;
 
 const inputClasses = "block w-full rounded-md border-0 px-3 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6";
@@ -55,8 +57,6 @@ function FormField({ id, label, required = false, children }: { id: string, labe
 function ExperienciaFields({ index, formData, handleChange }: ExperienciaFieldsProps) {
   const prefix = index === 1 ? '' : String(index);
 
-  // AQUI ESTÁ A CORREÇÃO PRINCIPAL:
-  // Trocamos "as const" por "as keyof FormDataType"
   const fieldNames = {
     empresa: `empresa${prefix}Candidato` as keyof FormDataType,
     local: `local${index}Candidato` as keyof FormDataType,
@@ -89,6 +89,13 @@ export default function FormCandidatoPublico({ vagaId }: { vagaId?: number }) {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [visibleExperiences, setVisibleExperiences] = useState(0);
 
+  // Analytics: Configurar tracking
+  const currentTabIndex = TABS_CONFIG.findIndex(tab => tab.id === activeTab);
+  const analytics = useStepAnalytics('manual_dados', currentTabIndex + 1);
+  
+  // Estado para controlar se é o primeiro preenchimento de cada etapa
+  const [etapasPreenchidas, setEtapasPreenchidas] = useState<Set<TabId>>(new Set());
+
   const [formData, setFormData] = useState<FormDataType>({
     nomeCandidato: '', cpfCandidato: '', rgCandidato: '', sexoCandidato: '', outrosexoCandidato: '',
     estadocivilCandidato: '', datanascimentoCandidato: '', emailCandidato: '', telefoneCandidato: '',
@@ -105,22 +112,107 @@ export default function FormCandidatoPublico({ vagaId }: { vagaId?: number }) {
     parentescoCandidato: 'Não', graudeparentescoenomeCandidato: '',
   });
 
+  // Analytics: Rastrear mudanças de etapa
+  useEffect(() => {
+    const currentTab = TABS_CONFIG.find(tab => tab.id === activeTab);
+    if (currentTab && !etapasPreenchidas.has(activeTab)) {
+      // CORREÇÃO: Removido 'as any'. A verificação 'if (currentTab)' já garante que 'currentTab.etapa' não é undefined.
+      analytics.trackPreenchimento(currentTab.etapa, {
+        etapaId: activeTab,
+        etapaLabel: currentTab.label,
+        primeiraVisita: true
+      });
+      setEtapasPreenchidas(prev => new Set([...prev, activeTab]));
+    }
+  }, [activeTab, analytics, etapasPreenchidas]);
+
   const handleTabNavigation = (direction: 'next' | 'prev') => {
     const currentIndex = TABS_CONFIG.findIndex(t => t.id === activeTab);
     const newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
-    if (newIndex >= 0 && newIndex < TABS_CONFIG.length) setActiveTab(TABS_CONFIG[newIndex].id);
+    
+    if (newIndex >= 0 && newIndex < TABS_CONFIG.length) {
+      const currentTab = TABS_CONFIG[currentIndex];
+      const nextTab = TABS_CONFIG[newIndex];
+      
+      // Analytics: Rastrear navegação entre etapas
+      // CORREÇÃO: Removido 'as any'. Como 'nextTab' é garantido, seu tipo é inferido corretamente.
+      analytics.track({
+        evento: 'preenchimento',
+        etapa: nextTab.etapa,
+        dadosExtra: {
+          navegacao: direction,
+          etapaOrigem: currentTab.etapa,
+          etapaDestino: nextTab.etapa,
+          metodoNavegacao: 'botao'
+        }
+      });
+
+      setActiveTab(TABS_CONFIG[newIndex].id);
+      window.scrollTo(0, 0);
+    }
+  };
+
+  const handleTabClick = (tabId: TabId) => {
+    const currentIndex = TABS_CONFIG.findIndex(t => t.id === activeTab);
+    const targetIndex = TABS_CONFIG.findIndex(t => t.id === tabId);
+    const currentTab = TABS_CONFIG[currentIndex];
+    const targetTab = TABS_CONFIG[targetIndex];
+
+    // Analytics: Rastrear clique direto em aba
+    // CORREÇÃO: Removido 'as any'. Como 'targetTab' é garantido, seu tipo é inferido corretamente.
+    analytics.track({
+      evento: 'preenchimento',
+      etapa: targetTab.etapa,
+      dadosExtra: {
+        navegacao: targetIndex > currentIndex ? 'next' : 'prev',
+        etapaOrigem: currentTab.etapa,
+        etapaDestino: targetTab.etapa,
+        metodoNavegacao: 'click_direto',
+        distanciaEtapas: Math.abs(targetIndex - currentIndex)
+      }
+    });
+
+    setActiveTab(tabId);
     window.scrollTo(0, 0);
   };
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement> | { name: string; value: string }) => {
     const { name, value } = 'target' in e ? e.target : e;
 
-    // Verifique se este bloco está correto
+    // Analytics: Rastrear início de preenchimento em campos importantes
+    if ('target' in e && e.target.value === '' && value !== '') {
+      const camposImportantes = [
+        'nomeCandidato', 'emailCandidato', 'cpfCandidato', 'telefoneCandidato',
+        'cepCandidato', 'escolaridadeCandidato', 'vagainteresseCandidato'
+      ];
+      
+      const currentTab = TABS_CONFIG.find(tab => tab.id === activeTab);
+      // CORREÇÃO: Adicionada verificação 'if (currentTab)' para remover a necessidade do 'as any'.
+      if (currentTab && camposImportantes.includes(name)) {
+        analytics.trackPreenchimento(currentTab.etapa, {
+          campo: name,
+          primeiroPreenchimento: true,
+          etapaAtual: activeTab
+        });
+      }
+    }
+
     if ('target' in e && e.target.type === 'checkbox' && name === 'conhecimentosinformaticaCandidato') {
-      // Adicione a asserção de tipo 'as HTMLInputElement' se estiver faltando
       const { checked, value: checkboxValue } = e.target as HTMLInputElement;
       const currentValues = formData.conhecimentosinformaticaCandidato;
       const newValues = checked ? [...currentValues, checkboxValue] : currentValues.filter((v) => v !== checkboxValue);
+      
+      if (checked) {
+        analytics.track({
+          evento: 'preenchimento',
+          etapa: 'step_3',
+          dadosExtra: {
+            conhecimentoSelecionado: checkboxValue,
+            totalConhecimentos: newValues.length
+          }
+        });
+      }
+
       setFormData(prev => ({
         ...prev,
         conhecimentosinformaticaCandidato: newValues,
@@ -144,14 +236,71 @@ export default function FormCandidatoPublico({ vagaId }: { vagaId?: number }) {
 
     if (name === 'possuiexperienciaCandidato') {
       setVisibleExperiences(value === 'Sim' ? 1 : 0);
+      analytics.track({
+        evento: 'preenchimento',
+        etapa: 'profissional',
+        dadosExtra: {
+          possuiExperiencia: value,
+          campo: 'possuiexperienciaCandidato'
+        }
+      });
+    }
+
+    if (name === 'vagainteresseCandidato' && value) {
+      analytics.track({
+        evento: 'preenchimento',
+        etapa: 'step_3',
+        dadosExtra: {
+          vagaSelecionada: value,
+          campo: 'vagainteresseCandidato'
+        }
+      });
     }
   };
 
-  const handleAddExperience = () => { if (visibleExperiences < 3) setVisibleExperiences(p => p + 1); };
-  const removePhoto = () => { setPhotoPreview(null); setFormData(p => ({ ...p, fotoCandidato: '' })); };
+  const handleAddExperience = () => { 
+    if (visibleExperiences < 3) {
+      const novoNumero = visibleExperiences + 1;
+      setVisibleExperiences(novoNumero);
+      
+      analytics.track({
+        evento: 'preenchimento',
+        etapa: 'profissional',
+        dadosExtra: {
+          acao: 'adicionar_experiencia',
+          numeroExperiencias: novoNumero
+        }
+      });
+    }
+  };
+
+  const removePhoto = () => { 
+    setPhotoPreview(null); 
+    setFormData(p => ({ ...p, fotoCandidato: '' })); 
+    
+    analytics.track({
+      evento: 'preenchimento',
+      etapa: 'dados_pessoais',
+      dadosExtra: {
+        acao: 'remover_foto'
+      }
+    });
+  };
+
   const handlePhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
+    analytics.track({
+      evento: 'preenchimento',
+      etapa: 'dados_pessoais',
+      dadosExtra: {
+        acao: 'upload_foto',
+        tipoArquivo: file.type,
+        tamanhoArquivo: file.size
+      }
+    });
+
     const reader = new FileReader();
     reader.onloadend = () => {
       setPhotoPreview(reader.result as string);
@@ -163,13 +312,60 @@ export default function FormCandidatoPublico({ vagaId }: { vagaId?: number }) {
   const buscarCep = async () => {
     const cep = (formData.cepCandidato || '').replace(/\D/g, '');
     if (cep.length !== 8) return;
+    
     try {
+      analytics.track({
+        evento: 'preenchimento',
+        etapa: 'endereco',
+        dadosExtra: {
+          acao: 'buscar_cep',
+          cep: cep
+        }
+      });
+
       const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
       const data = await response.json();
+      
       if (!data.erro) {
-        setFormData(prev => ({ ...prev, ruaCandidato: data.logradouro, bairroCandidato: data.bairro, cidadeCandidato: data.localidade, estadoCandidato: data.uf }));
+        setFormData(prev => ({ 
+          ...prev, 
+          ruaCandidato: data.logradouro, 
+          bairroCandidato: data.bairro, 
+          cidadeCandidato: data.localidade, 
+          estadoCandidato: data.uf 
+        }));
+
+        analytics.track({
+          evento: 'preenchimento',
+          etapa: 'endereco',
+          dadosExtra: {
+            acao: 'cep_encontrado',
+            cidade: data.localidade,
+            estado: data.uf
+          }
+        });
+      } else {
+        analytics.track({
+          evento: 'preenchimento',
+          etapa: 'endereco',
+          dadosExtra: {
+            acao: 'cep_nao_encontrado',
+            cep: cep
+          }
+        });
       }
-    } catch (error) { console.error('Erro ao buscar CEP:', error); }
+    } catch (error) { 
+      console.error('Erro ao buscar CEP:', error);
+      
+      analytics.track({
+        evento: 'preenchimento',
+        etapa: 'endereco',
+        dadosExtra: {
+          acao: 'erro_busca_cep',
+          erro: 'erro_rede'
+        }
+      });
+    }
   };
 
   const validateForm = () => {
@@ -198,26 +394,114 @@ export default function FormCandidatoPublico({ vagaId }: { vagaId?: number }) {
     for (const key in requiredFields) {
       const field = key as keyof FormDataType;
       if (!formData[field]) {
-        toast.error(`O campo "${requiredFields[field]?.label}" é obrigatório.`);
-        setActiveTab(requiredFields[field]!.tab);
+        const fieldInfo = requiredFields[field]!;
+        
+        // CORREÇÃO: Adicionada verificação para garantir que 'tabInfo' existe antes de usar 'tabInfo.etapa'.
+        const tabInfo = TABS_CONFIG.find(tab => tab.id === fieldInfo.tab);
+        if (tabInfo) {
+          analytics.track({
+            evento: 'abandono',
+            etapa: tabInfo.etapa,
+            dadosExtra: {
+              motivo: 'campo_obrigatorio_vazio',
+              campo: field,
+              etapaErro: fieldInfo.tab
+            }
+          });
+        }
+
+        toast.error(`O campo "${fieldInfo.label}" é obrigatório.`);
+        setActiveTab(fieldInfo.tab);
         return false;
       }
     }
 
-    if (formData.sexoCandidato === 'Outro' && !formData.outrosexoCandidato) { toast.error('O campo "Especifique o Sexo" é obrigatório.'); setActiveTab('pessoal'); return false; }
-    if (formData.parentescoCandidato === 'Sim' && !formData.graudeparentescoenomeCandidato) { toast.error('Por favor, informe o nome e grau de parentesco.'); setActiveTab('pessoal'); return false; }
-    if (formData.cnhCandidato === 'Sim' && !formData.categoriacnhCandidato) { toast.error('O campo "Categoria CNH" é obrigatório.'); setActiveTab('documentos'); return false; }
-    if (formData.pcdCandidato === 'Sim' && !formData.cidareacandidato) { toast.error('O campo "Qual o CID?" é obrigatório.'); setActiveTab('documentos'); return false; }
-    if (formData.conhecimentosinformaticaCandidato.includes('Outros') && !formData.conhecimentoinfcandidato) { toast.error('O campo "Especifique outros conhecimentos" é obrigatório.'); setActiveTab('formacao'); return false; }
-    if (formData.possuiexperienciaCandidato === 'Sim' && !formData.empresaCandidato) { toast.error('Pelo menos a primeira experiência profissional precisa ser preenchida.'); setActiveTab('experiencia'); return false; }
+    if (formData.sexoCandidato === 'Outro' && !formData.outrosexoCandidato) { 
+      analytics.track({
+        evento: 'abandono',
+        etapa: 'dados_pessoais',
+        dadosExtra: { motivo: 'especificar_sexo_vazio' }
+      });
+      toast.error('O campo "Especifique o Sexo" é obrigatório.'); 
+      setActiveTab('pessoal'); 
+      return false; 
+    }
+
+    if (formData.parentescoCandidato === 'Sim' && !formData.graudeparentescoenomeCandidato) { 
+      analytics.track({
+        evento: 'abandono',
+        etapa: 'dados_pessoais',
+        dadosExtra: { motivo: 'parentesco_sem_detalhes' }
+      });
+      toast.error('Por favor, informe o nome e grau de parentesco.'); 
+      setActiveTab('pessoal'); 
+      return false; 
+    }
+
+    if (formData.cnhCandidato === 'Sim' && !formData.categoriacnhCandidato) { 
+      analytics.track({
+        evento: 'abandono',
+        etapa: 'step_2',
+        dadosExtra: { motivo: 'categoria_cnh_vazia' }
+      });
+      toast.error('O campo "Categoria CNH" é obrigatório.'); 
+      setActiveTab('documentos'); 
+      return false; 
+    }
+
+    if (formData.pcdCandidato === 'Sim' && !formData.cidareacandidato) { 
+      analytics.track({
+        evento: 'abandono',
+        etapa: 'step_2',
+        dadosExtra: { motivo: 'cid_vazio' }
+      });
+      toast.error('O campo "Qual o CID?" é obrigatório.'); 
+      setActiveTab('documentos'); 
+      return false; 
+    }
+
+    if (formData.conhecimentosinformaticaCandidato.includes('Outros') && !formData.conhecimentoinfcandidato) { 
+      analytics.track({
+        evento: 'abandono',
+        etapa: 'step_3',
+        dadosExtra: { motivo: 'outros_conhecimentos_vazio' }
+      });
+      toast.error('O campo "Especifique outros conhecimentos" é obrigatório.'); 
+      setActiveTab('formacao'); 
+      return false; 
+    }
+
+    if (formData.possuiexperienciaCandidato === 'Sim' && !formData.empresaCandidato) { 
+      analytics.track({
+        evento: 'abandono',
+        etapa: 'profissional',
+        dadosExtra: { motivo: 'experiencia_sem_empresa' }
+      });
+      toast.error('Pelo menos a primeira experiência profissional precisa ser preenchida.'); 
+      setActiveTab('experiencia'); 
+      return false; 
+    }
 
     return true;
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
     if (!validateForm()) return;
+    
     setLoading(true);
+    
+    analytics.track({
+      evento: 'preenchimento',
+      etapa: 'step_3',
+      dadosExtra: {
+        acao: 'iniciando_envio',
+        temVagaId: !!vagaId,
+        totalEtapasVisitadas: etapasPreenchidas.size
+      }
+    });
+
     try {
       const bodyParaApi = {
         ...formData,
@@ -237,11 +521,36 @@ export default function FormCandidatoPublico({ vagaId }: { vagaId?: number }) {
         throw new Error(errorData.error || 'Erro ao realizar inscrição.');
       }
 
+      analytics.trackEnvio({
+        sucesso: true,
+        vagaId: vagaId,
+        dadosEnviados: {
+          possuiFoto: !!formData.fotoCandidato,
+          possuiExperiencia: formData.possuiexperienciaCandidato === 'Sim',
+          escolaridade: formData.escolaridadeCandidato,
+          vagaInteresse: formData.vagainteresseCandidato,
+          numeroExperiencias: visibleExperiences,
+          conhecimentosInformatica: formData.conhecimentosinformaticaCandidato.length
+        }
+      });
+
       toast.success('Inscrição realizada com sucesso!');
       router.push(`/obrigado`);
+      
     } catch (error) {
       console.error(error);
       const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro desconhecido.';
+      
+      analytics.track({
+        evento: 'abandono',
+        etapa: 'step_3',
+        dadosExtra: {
+          motivo: 'erro_envio',
+          erro: errorMessage,
+          vagaId: vagaId
+        }
+      });
+
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -258,7 +567,7 @@ export default function FormCandidatoPublico({ vagaId }: { vagaId?: number }) {
         {TABS_CONFIG.map((tab, index) => (
           <div key={tab.id} className="flex flex-1 items-center">
             <div className="flex flex-col items-center">
-              <button onClick={() => setActiveTab(tab.id)} className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all sm:h-12 sm:w-12 ${activeTab === tab.id ? 'border-indigo-600 bg-indigo-600 text-white' : TABS_CONFIG.findIndex(t => t.id === activeTab) > index ? 'border-indigo-600 bg-white text-indigo-600' : 'border-gray-300 bg-white text-gray-400 hover:border-gray-400'}`}>
+              <button onClick={() => handleTabClick(tab.id)} className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all sm:h-12 sm:w-12 ${activeTab === tab.id ? 'border-indigo-600 bg-indigo-600 text-white' : TABS_CONFIG.findIndex(t => t.id === activeTab) > index ? 'border-indigo-600 bg-white text-indigo-600' : 'border-gray-300 bg-white text-gray-400 hover:border-gray-400'}`}>
                 {TABS_CONFIG.findIndex(t => t.id === activeTab) > index ? <CheckCircle size={24} /> : <tab.icon size={20} />}
               </button>
               <p className={`mt-2 hidden text-center text-xs font-medium sm:block sm:text-sm ${activeTab === tab.id || TABS_CONFIG.findIndex(t => t.id === activeTab) > index ? 'text-indigo-600' : 'text-gray-500'}`}>{tab.label}</p>

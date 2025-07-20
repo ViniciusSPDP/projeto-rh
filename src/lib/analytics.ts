@@ -1,7 +1,9 @@
 // src/lib/analytics.ts
 
 import { NextRequest } from 'next/server';
+// CORREÇÃO 1: As importações foram separadas.
 import prisma from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 
 // Tipos para os eventos
 export type TipoFormulario = 'upload_curriculo' | 'manual_dados';
@@ -29,24 +31,18 @@ interface DadosConversao {
 
 class AnalyticsService {
   
-  // Gerar ID de sessão único
   static gerarSessionId(): string {
     return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  // Extrair dados da requisição
   static extrairDadosRequisicao(request?: NextRequest) {
     if (!request) return {};
-    
     return {
       userAgent: request.headers.get('user-agent') || undefined,
-      ip: request.headers.get('x-forwarded-for') || 
-          request.headers.get('x-real-ip') || 
-          'unknown'
+      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
     };
   }
 
-  // Registrar evento de analytics
   static async registrarEvento(dados: EventoAnalytics): Promise<void> {
     try {
       await prisma.formularioAnalytics.create({
@@ -57,86 +53,42 @@ class AnalyticsService {
           etapa: dados.etapa,
           userAgent: dados.userAgent,
           ip: dados.ip,
-          dadosEvento: dados.dadosExtra || {}
+          dadosEvento: (dados.dadosExtra || {}) as Prisma.JsonObject
         }
       });
-
       console.log(`[ANALYTICS] Evento registrado: ${dados.evento} - ${dados.tipoForm}`);
     } catch (error) {
       console.error('[ANALYTICS] Erro ao registrar evento:', error);
     }
   }
 
-  // Atualizar funil de conversão
   static async atualizarConversao(dados: DadosConversao): Promise<void> {
     try {
-      const agora = new Date();
-      
-      // Buscar registro existente ou criar novo
-      const conversaoExistente = await prisma.conversaoFunil.findUnique({
-        where: { sessionId: dados.sessionId }
-      });
-
-      if (conversaoExistente) {
-        // Atualizar registro existente
-        const updateData: Record<string, unknown> = {};
-        
-        switch (dados.evento) {
-          case 'abertura':
-            if (!conversaoExistente.aberturaAt) {
-              updateData.aberturaAt = agora;
-            }
-            break;
-          case 'preenchimento':
-            updateData.preenchimentoAt = agora;
-            if (dados.etapa) {
-              const etapasVisitadas = (conversaoExistente.etapasVisitadas as string[]) || [];
-              if (!etapasVisitadas.includes(dados.etapa)) {
-                etapasVisitadas.push(dados.etapa);
-                updateData.etapasVisitadas = etapasVisitadas;
-              }
-            }
-            break;
-          case 'envio':
-            updateData.envioAt = agora;
-            if (conversaoExistente.aberturaAt) {
-              updateData.tempoTotal = Math.floor(
-                (agora.getTime() - conversaoExistente.aberturaAt.getTime()) / 1000
-              );
-            }
-            break;
-          case 'abandono':
-            updateData.abandonouEm = dados.etapa;
-            break;
+      await prisma.conversaoFunil.upsert({
+        where: { sessionId: dados.sessionId },
+        update: {
+          ...(dados.evento === 'preenchimento' && { preenchimentoAt: new Date() }),
+          ...(dados.evento === 'envio' && { envioAt: new Date() }),
+          ...(dados.evento === 'abandono' && { abandonouEm: dados.etapa }),
+          ...(dados.etapa && { etapasVisitadas: { push: dados.etapa } }),
+          // CORREÇÃO 2: A linha 'ultimoAcessoAt' foi removida pois o campo não existe no seu schema.
+        },
+        create: {
+          sessionId: dados.sessionId,
+          tipoForm: dados.tipoForm,
+          aberturaAt: new Date(),
+          etapasVisitadas: dados.etapa ? [dados.etapa] : [],
+          ...(dados.evento === 'preenchimento' && { preenchimentoAt: new Date() }),
+          ...(dados.evento === 'envio' && { envioAt: new Date() }),
+          ...(dados.evento === 'abandono' && { abandonouEm: dados.etapa }),
         }
-
-        await prisma.conversaoFunil.update({
-          where: { sessionId: dados.sessionId },
-          data: updateData
-        });
-
-      } else {
-        // Criar novo registro
-        await prisma.conversaoFunil.create({
-          data: {
-            sessionId: dados.sessionId,
-            tipoForm: dados.tipoForm,
-            aberturaAt: dados.evento === 'abertura' ? agora : undefined,
-            preenchimentoAt: dados.evento === 'preenchimento' ? agora : undefined,
-            envioAt: dados.evento === 'envio' ? agora : undefined,
-            etapasVisitadas: dados.etapa ? [dados.etapa] : [],
-            abandonouEm: dados.evento === 'abandono' ? dados.etapa : undefined
-          }
-        });
-      }
-
+      });
       console.log(`[ANALYTICS] Conversão atualizada: ${dados.evento} - ${dados.sessionId}`);
     } catch (error) {
       console.error('[ANALYTICS] Erro ao atualizar conversão:', error);
     }
   }
 
-  // Método combinado para registrar evento e atualizar conversão
   static async track(dados: DadosConversao & { userAgent?: string; ip?: string }): Promise<void> {
     await Promise.all([
       this.registrarEvento({
@@ -152,7 +104,6 @@ class AnalyticsService {
     ]);
   }
 
-  // Obter estatísticas do funil
   static async obterEstatisticas(periodo: 'hoje' | 'semana' | 'mes' | 'total' = 'mes') {
     const agora = new Date();
     let dataInicio: Date;
@@ -168,14 +119,11 @@ class AnalyticsService {
         dataInicio = new Date(agora.getFullYear(), agora.getMonth(), 1);
         break;
       default:
-        dataInicio = new Date('2020-01-01'); // Data muito antiga para pegar tudo
+        dataInicio = new Date('2020-01-01');
     }
 
-    // Estatísticas por tipo de formulário
     const estatisticas = await Promise.all([
-      // Upload de currículo
       this.obterEstatisticasFormulario('upload_curriculo', dataInicio),
-      // Preenchimento manual
       this.obterEstatisticasFormulario('manual_dados', dataInicio)
     ]);
 
@@ -195,22 +143,15 @@ class AnalyticsService {
     };
 
     const [aberturas, preenchimentos, envios, conversoes] = await Promise.all([
-      // Total de aberturas
       prisma.conversaoFunil.count({
         where: { ...where, aberturaAt: { not: null } }
       }),
-      
-      // Total de preenchimentos (começaram a preencher)
       prisma.conversaoFunil.count({
         where: { ...where, preenchimentoAt: { not: null } }
       }),
-      
-      // Total de envios (completaram)
       prisma.conversaoFunil.count({
         where: { ...where, envioAt: { not: null } }
       }),
-
-      // Dados detalhados das conversões
       prisma.conversaoFunil.findMany({
         where,
         select: {
@@ -224,12 +165,10 @@ class AnalyticsService {
       })
     ]);
 
-    // Calcular taxas de conversão
     const taxaPreenchimento = aberturas > 0 ? (preenchimentos / aberturas) * 100 : 0;
     const taxaEnvio = preenchimentos > 0 ? (envios / preenchimentos) * 100 : 0;
     const taxaConversaoTotal = aberturas > 0 ? (envios / aberturas) * 100 : 0;
 
-    // Tempo médio de preenchimento
     const temposValidos = conversoes
       .filter(c => c.tempoTotal && c.tempoTotal > 0)
       .map(c => c.tempoTotal as number);
@@ -238,7 +177,6 @@ class AnalyticsService {
       ? temposValidos.reduce((a, b) => a + b, 0) / temposValidos.length 
       : 0;
 
-    // Principais pontos de abandono
     const abandonos = conversoes
       .filter(c => c.abandonouEm)
       .reduce((acc, curr) => {

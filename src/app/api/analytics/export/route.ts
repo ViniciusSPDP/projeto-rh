@@ -2,6 +2,43 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
+// Definição das interfaces para tipagem forte
+interface EventoParaCSV {
+  sessionId: string;
+  tipoForm: string;
+  evento: string;
+  etapa: string | null;
+  data: Date;
+  dadosEvento: unknown;
+}
+
+interface DadosParaExportCSV {
+  eventos: EventoParaCSV[];
+}
+
+function convertToCSV(data: DadosParaExportCSV): string {
+  const csvLines = [];
+  
+  // Header do CSV
+  csvLines.push('TipoForm,SessionId,Evento,Etapa,Data,DadosExtra');
+  
+  // Linhas de dados dos eventos
+  data.eventos.forEach((evento: EventoParaCSV) => {
+    const linha = [
+      evento.tipoForm,
+      evento.sessionId,
+      evento.evento,
+      evento.etapa || '', // Garante que não haverá 'null' no CSV
+      evento.data.toISOString(), // Usa .toISOString() para um formato de data padronizado
+      JSON.stringify(evento.dadosEvento || {}) // Garante que o JSON é válido
+    ];
+    csvLines.push(linha.join(','));
+  });
+  
+  return csvLines.join('\n');
+}
+
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -25,13 +62,12 @@ export async function GET(request: NextRequest) {
         dataInicio = new Date('2020-01-01');
     }
 
-    // Buscar dados detalhados
     const eventos = await prisma.formularioAnalytics.findMany({
       where: {
         createdAt: { gte: dataInicio }
       },
       orderBy: { createdAt: 'desc' },
-      take: 1000 // Limitar a 1000 registros
+      take: 1000
     });
 
     const conversoes = await prisma.conversaoFunil.findMany({
@@ -68,7 +104,7 @@ export async function GET(request: NextRequest) {
     };
 
     if (formato === 'csv') {
-      // Converter para CSV
+      // Agora 'dadosExport' é compatível com o tipo esperado pela função
       const csvContent = convertToCSV(dadosExport);
       
       return new NextResponse(csvContent, {
@@ -84,29 +120,10 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('[ANALYTICS EXPORT] Erro:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
     return NextResponse.json({
-      error: 'Erro interno do servidor'
+      error: 'Erro interno do servidor',
+      details: errorMessage
     }, { status: 500 });
   }
-}
-
-function convertToCSV(data: any): string {
-  const csvLines = [];
-  
-  // Header
-  csvLines.push('Tipo,SessionId,Evento,Etapa,Data,DadosExtra');
-  
-  // Eventos
-  data.eventos.forEach((evento: any) => {
-    csvLines.push([
-      evento.tipoForm,
-      evento.sessionId,
-      evento.evento,
-      evento.etapa || '',
-      evento.data,
-      JSON.stringify(evento.dadosEvento || {})
-    ].join(','));
-  });
-  
-  return csvLines.join('\n');
 }
