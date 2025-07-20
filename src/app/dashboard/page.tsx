@@ -246,12 +246,12 @@ export default async function DashboardPage() {
           </Link>
 
           <Link
-            href="/relatorios"
+            href="/analytics"
             className="p-4 border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-all duration-200 group"
           >
             <TrendingUp className="w-8 h-8 text-purple-600 mb-2 group-hover:scale-110 transition-transform duration-200" />
-            <h3 className="font-semibold text-slate-800">Relatórios</h3>
-            <p className="text-sm text-slate-600 mt-1">Análises e estatísticas</p>
+            <h3 className="font-semibold text-slate-800">Analytics</h3>
+            <p className="text-sm text-slate-600 mt-1">Análises e estatísticas dos formularios</p>
           </Link>
         </div>
       </div>
