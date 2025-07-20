@@ -1,9 +1,11 @@
+//src/app/candidatar-se/page.tsx (COM ANALYTICS)
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Toaster, toast } from 'react-hot-toast';
 import { User, FileText, Mail, Phone, MapPin, Briefcase, Loader2, UploadCloud, CheckCircle, ArrowRight, AlertTriangle } from 'lucide-react';
+import { useStepAnalytics } from '@/hooks/useAnalytics';
 
 // Funções de máscara personalizadas
 const masks = {
@@ -15,7 +17,7 @@ const masks = {
       .replace(/(\d{3})(\d{1,2})/, '$1-$2')
       .replace(/(-\d{2})\d+?$/, '$1');
   },
-  
+
   phone: (value: string) => {
     return value
       .replace(/\D/g, '')
@@ -24,7 +26,7 @@ const masks = {
       .replace(/(\d{4})-(\d)(\d{4})/, '$1$2-$3')
       .replace(/(-\d{4})\d+?$/, '$1');
   },
-  
+
   cep: (value: string) => {
     return value
       .replace(/\D/g, '')
@@ -35,10 +37,10 @@ const masks = {
 
 export default function CandidatarSePage() {
   const router = useRouter();
-  
+
   const cargosDisponiveis = [
-    "Administrativo", "Reposição", "Expedição", "Recebimento", "Entrega", 
-    "Financeiro", "Compras", "Fiscal", "Vendas", "Marketing", 
+    "Administrativo", "Reposição", "Expedição", "Recebimento", "Entrega",
+    "Financeiro", "Compras", "Fiscal", "Vendas", "Marketing",
     "Conferência", "RH", "TI"
   ];
 
@@ -51,10 +53,53 @@ export default function CandidatarSePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  // 🎯 ANALYTICS: Implementar tracking por step
+  const analytics = useStepAnalytics('upload_curriculo', currentStep);
+  const [camposPreenchidos, setCamposPreenchidos] = useState<Set<string>>(new Set());
+  const [tempoInicioStep, setTempoInicioStep] = useState<number>(Date.now());
+
+  // 📊 ANALYTICS: Track mudanças de step
+  const handleStepChange = useCallback((novoStep: number) => {
+    const tempoNaEtapa = Date.now() - tempoInicioStep;
+
+    if (novoStep > currentStep) {
+      // Avançando - registrar preenchimento da etapa atual
+      const etapas = ['step_1', 'step_2', 'step_3'] as const;
+      analytics.trackPreenchimento(etapas[currentStep - 1], {
+        etapaCompletada: currentStep,
+        proximaEtapa: novoStep,
+        tempoNaEtapa,
+        camposPreenchidos: camposPreenchidos.size,
+        direcao: 'avancar'
+      });
+    } else if (novoStep < currentStep) {
+      // Defina o array de etapas para garantir a tipagem correta
+      const etapas = ['step_1', 'step_2', 'step_3'] as const;
+
+      // Voltando - registrar navegação reversa
+      analytics.track({
+        evento: 'preenchimento',
+        // Use o índice para pegar o valor do tipo correto
+        etapa: etapas[currentStep - 1], // 👈 CORREÇÃO APLICADA
+        dadosExtra: {
+          direcao: 'voltar',
+          etapaOrigem: currentStep,
+          etapaDestino: novoStep,
+          tempoNaEtapa
+        }
+      });
+    }
+
+    setCurrentStep(novoStep);
+    setTempoInicioStep(Date.now());
+    window.scrollTo(0, 0);
+  }, [currentStep, analytics, camposPreenchidos, tempoInicioStep]);
+
+  // 📝 ANALYTICS: Track preenchimento de campos
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     let formattedValue = value;
-    
+
     // Aplicar máscaras
     if (name === 'cpf') {
       formattedValue = masks.cpf(value);
@@ -63,14 +108,41 @@ export default function CandidatarSePage() {
     } else if (name === 'cep') {
       formattedValue = masks.cep(value);
     }
-    
-    setFormData(prev => ({ ...prev, [name]: formattedValue }));
-  };
 
+    setFormData(prev => ({ ...prev, [name]: formattedValue }));
+
+    // 🎯 ANALYTICS: Track preenchimento de campos importantes
+    if (value.trim().length > 0 && !camposPreenchidos.has(name)) {
+      setCamposPreenchidos(prev => new Set([...prev, name]));
+
+      // Marcos importantes do formulário
+      const marcos = {
+        nome: 'primeiro_campo_preenchido',
+        email: 'contato_email_preenchido',
+        telefone: 'dados_contato_completos',
+        cargo: 'vaga_selecionada',
+        cep: 'endereco_iniciado'
+      };
+
+      if (marcos[name as keyof typeof marcos]) {
+        const etapas = ['step_1', 'step_2', 'step_3'] as const;
+        analytics.trackPreenchimento(etapas[currentStep - 1], {
+          marco: marcos[name as keyof typeof marcos],
+          campo: name,
+          totalCampos: camposPreenchidos.size + 1,
+          stepAtual: currentStep
+        });
+      }
+    }
+  }, [analytics, currentStep, camposPreenchidos]);
+
+  // 🌍 ANALYTICS: Track busca de CEP
   const handleCepBlur = useCallback(async () => {
     const cepLimpo = formData.cep.replace(/\D/g, '');
     if (cepLimpo.length !== 8) return;
-    
+
+    const inicioConsulta = Date.now();
+
     try {
       const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`, {
         method: 'GET',
@@ -78,12 +150,14 @@ export default function CandidatarSePage() {
           'Accept': 'application/json',
         },
       });
-      
+
       if (!response.ok) {
         throw new Error('Erro na consulta do CEP');
       }
-      
+
       const data = await response.json();
+      const tempoConsulta = Date.now() - inicioConsulta;
+
       if (!data.erro) {
         setFormData(prev => ({
           ...prev,
@@ -93,75 +167,135 @@ export default function CandidatarSePage() {
           estado: data.uf || '',
         }));
         toast.success('CEP encontrado!');
+
+        // 🎯 ANALYTICS: CEP encontrado com sucesso
+        analytics.trackPreenchimento('step_2', {
+          evento_especial: 'cep_encontrado',
+          cep: cepLimpo,
+          cidade: data.localidade,
+          estado: data.uf,
+          tempoConsulta,
+          preenchimentoAutomatico: true
+        });
       } else {
         toast.error('CEP não encontrado.');
+
+        // 🎯 ANALYTICS: CEP não encontrado
+        analytics.trackAbandono('step_2', {
+          motivo: 'cep_nao_encontrado',
+          cep: cepLimpo,
+          tempoConsulta
+        });
       }
     } catch (error) {
       console.error("Erro ao buscar CEP:", error);
       toast.error('Não foi possível buscar o CEP. Verifique sua conexão.');
+
+      // 🎯 ANALYTICS: Erro na consulta do CEP
+      analytics.trackAbandono('step_2', {
+        motivo: 'erro_consulta_cep',
+        cep: cepLimpo,
+        erro: error instanceof Error ? error.message : 'Erro desconhecido',
+        tempoConsulta: Date.now() - inicioConsulta
+      });
     }
-  }, [formData.cep]);
+  }, [formData.cep, analytics]);
 
   const validateFile = (file: File): string | null => {
     // Validar tipo MIME
     if (file.type !== 'application/pdf') {
       return 'Apenas arquivos PDF são aceitos.';
     }
-    
+
     // Validar extensão
     if (!file.name.toLowerCase().endsWith('.pdf')) {
       return 'O arquivo deve ter extensão .pdf';
     }
-    
+
     // Validar tamanho (5MB)
     if (file.size > 5 * 1024 * 1024) {
       return 'O arquivo deve ter no máximo 5MB.';
     }
-    
+
     return null;
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 📎 ANALYTICS: Track upload de arquivo
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) {
       setCurriculo(null);
       return;
     }
-    
+
     const error = validateFile(file);
     if (error) {
       toast.error(error);
-      e.target.value = ''; // Limpar input
+      e.target.value = '';
       setCurriculo(null);
+
+      // 🎯 ANALYTICS: Erro no upload
+      analytics.trackAbandono('step_3', {
+        motivo: 'arquivo_invalido',
+        erro: error,
+        nomeArquivo: file.name,
+        tipoArquivo: file.type,
+        tamanhoArquivo: file.size,
+        tentativaUpload: true
+      });
       return;
     }
-    
+
     setCurriculo(file);
     toast.success('Arquivo PDF selecionado com sucesso!');
-  };
 
+    // 🎯 ANALYTICS: Upload bem-sucedido
+    analytics.trackPreenchimento('step_3', {
+      evento_especial: 'curriculo_anexado',
+      nomeArquivo: file.name,
+      tamanhoArquivo: file.size,
+      tipoArquivo: file.type,
+      tamanhoMB: (file.size / 1024 / 1024).toFixed(2)
+    });
+  }, [analytics]);
+
+  // 📤 ANALYTICS: Track envio do formulário
   const handleSubmit = useCallback(async (event: React.FormEvent) => {
     event.preventDefault();
-    
+
+    const inicioEnvio = Date.now();
+
     if (!declaracao) {
       toast.error("Você precisa concordar com a declaração para continuar.");
-      return;
-    }
-    
-    if (!curriculo) {
-      toast.error("Anexar o currículo é obrigatório.");
+      analytics.trackAbandono('step_3', {
+        motivo: 'declaracao_nao_aceita',
+        camposPreenchidos: camposPreenchidos.size
+      });
       return;
     }
 
-    // Validação final do arquivo
+    if (!curriculo) {
+      toast.error("Anexar o currículo é obrigatório.");
+      analytics.trackAbandono('step_3', {
+        motivo: 'curriculo_nao_anexado',
+        camposPreenchidos: camposPreenchidos.size
+      });
+      return;
+    }
+
     const fileError = validateFile(curriculo);
     if (fileError) {
       toast.error(fileError);
+      analytics.trackAbandono('step_3', {
+        motivo: 'arquivo_invalido_final',
+        erro: fileError,
+        camposPreenchidos: camposPreenchidos.size
+      });
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     const submissionData = new FormData();
     Object.entries(formData).forEach(([key, value]) => {
       submissionData.append(key, value);
@@ -175,13 +309,29 @@ export default function CandidatarSePage() {
       });
 
       const responseData = await response.json();
+      const tempoEnvio = Date.now() - inicioEnvio;
 
       if (!response.ok) {
         throw new Error(responseData.error || 'Falha ao enviar candidatura.');
       }
-      
+
+      // 🎯 ANALYTICS: Envio bem-sucedido - CONVERSÃO!
+      analytics.trackEnvio({
+        candidatoId: responseData.idCandidato,
+        cargo: formData.cargo,
+        cidade: formData.cidade,
+        estado: formData.estado,
+        tamanhoArquivo: curriculo.size,
+        nomeArquivo: curriculo.name,
+        totalCamposPreenchidos: camposPreenchidos.size,
+        tempoEnvio,
+        tempoTotalFormulario: Date.now() - tempoInicioStep,
+        stepsFinalizado: 3,
+        sucesso: true
+      });
+
       toast.success('Candidatura enviada com sucesso! Boa sorte!');
-      
+
       // Reset form
       setFormData({
         nome: '', cpf: '', email: '', telefone: '', cargo: '',
@@ -190,11 +340,25 @@ export default function CandidatarSePage() {
       setCurriculo(null);
       setDeclaracao(false);
       setCurrentStep(1);
-      
-      setTimeout(() => router.push('/'), 2000); 
+
+      setTimeout(() => router.push('/obrigado'), 2000);
 
     } catch (error: unknown) {
       console.error('Erro no envio:', error);
+
+      // 🎯 ANALYTICS: Erro no envio
+      analytics.trackAbandono('step_3', {
+        motivo: 'erro_envio_servidor',
+        erro: error instanceof Error ? error.message : 'Erro desconhecido',
+        camposPreenchidos: camposPreenchidos.size,
+        tempoEnvio: Date.now() - inicioEnvio,
+        dadosFormulario: {
+          temCurriculo: !!curriculo,
+          cargo: formData.cargo,
+          cidade: formData.cidade
+        }
+      });
+
       if (error instanceof Error) {
         toast.error(`Erro: ${error.message}`);
       } else {
@@ -203,7 +367,49 @@ export default function CandidatarSePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [formData, curriculo, declaracao, router]);
+  }, [formData, curriculo, declaracao, router, analytics, camposPreenchidos, tempoInicioStep]);
+
+  // 🚪 ANALYTICS: Track abandono quando sai da página
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (currentStep > 1 && !isLoading && camposPreenchidos.size > 0) {
+        // Usar sendBeacon para garantir que o evento seja enviado
+        navigator.sendBeacon('/api/analytics/track', JSON.stringify({
+          sessionId: analytics.sessionId,
+          tipoForm: 'upload_curriculo',
+          evento: 'abandono',
+          etapa: `step_${currentStep}`,
+          dadosExtra: {
+            motivoAbandonoSuspeito: 'fechou_navegador',
+            etapaAtual: currentStep,
+            camposPreenchidos: camposPreenchidos.size,
+            tempoNaEtapa: Date.now() - tempoInicioStep,
+            progresso: (currentStep / 3) * 100
+          }
+        }));
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [currentStep, isLoading, analytics, camposPreenchidos, tempoInicioStep]);
+
+  // 📊 ANALYTICS: Auto-save e tracking de progresso
+  useEffect(() => {
+    const intervalo = setInterval(() => {
+      if (camposPreenchidos.size > 0) {
+        const etapas = ['step_1', 'step_2', 'step_3'] as const;
+        analytics.trackPreenchimento(etapas[currentStep - 1], {
+          autoSave: true,
+          progresso: (camposPreenchidos.size / 11) * 100, // 11 campos totais
+          tempoDecorrido: Date.now() - tempoInicioStep,
+          engagement: 'ativo'
+        });
+      }
+    }, 45000); // A cada 45 segundos
+
+    return () => clearInterval(intervalo);
+  }, [analytics, currentStep, camposPreenchidos, tempoInicioStep]);
 
   const isStepValid = (step: number): boolean => {
     switch (step) {
@@ -222,9 +428,9 @@ export default function CandidatarSePage() {
     <div className="flex items-center">
       <div className={`
         flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300
-        ${isCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 
-          isActive ? 'bg-blue-600 border-blue-600 text-white' : 
-          'bg-gray-100 border-gray-300 text-gray-400'}
+        ${isCompleted ? 'bg-emerald-500 border-emerald-500 text-white' :
+          isActive ? 'bg-blue-600 border-blue-600 text-white' :
+            'bg-gray-100 border-gray-300 text-gray-400'}
       `}>
         {isCompleted ? <CheckCircle className="w-5 h-5" /> : step}
       </div>
@@ -238,8 +444,8 @@ export default function CandidatarSePage() {
 
   return (
     <>
-      <Toaster 
-        position="top-center" 
+      <Toaster
+        position="top-center"
         reverseOrder={false}
         toastOptions={{
           duration: 4000,
@@ -250,6 +456,14 @@ export default function CandidatarSePage() {
           },
         }}
       />
+
+      {/* 🔍 DEBUG: Analytics info - remover em produção */}
+      <div className="fixed bottom-4 right-4 bg-black text-white p-2 rounded text-xs z-50 opacity-75">
+        <div>📊 Session: {analytics.sessionId.slice(-8)}</div>
+        <div>📍 Step: {currentStep}/3</div>
+        <div>✅ Campos: {camposPreenchidos.size}</div>
+        <div>📝 Tipo: upload_curriculo</div>
+      </div>
 
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
         {/* Header with gradient */}
@@ -266,29 +480,29 @@ export default function CandidatarSePage() {
           {/* Progress Steps */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
             <div className="flex justify-between items-center">
-              <StepIndicator 
-                step={1} 
-                title="Dados Pessoais" 
-                isActive={currentStep === 1} 
-                isCompleted={isStepValid(1)} 
+              <StepIndicator
+                step={1}
+                title="Dados Pessoais"
+                isActive={currentStep === 1}
+                isCompleted={isStepValid(1)}
               />
               <div className="flex-1 h-1 bg-gray-200 mx-4 rounded-full">
                 <div className={`h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-500 ${isStepValid(1) ? 'w-full' : 'w-0'}`}></div>
               </div>
-              <StepIndicator 
-                step={2} 
-                title="Endereço" 
-                isActive={currentStep === 2} 
-                isCompleted={isStepValid(2)} 
+              <StepIndicator
+                step={2}
+                title="Endereço"
+                isActive={currentStep === 2}
+                isCompleted={isStepValid(2)}
               />
               <div className="flex-1 h-1 bg-gray-200 mx-4 rounded-full">
                 <div className={`h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-500 ${isStepValid(2) ? 'w-full' : 'w-0'}`}></div>
               </div>
-              <StepIndicator 
-                step={3} 
-                title="Vaga & Currículo" 
-                isActive={currentStep === 3} 
-                isCompleted={isStepValid(3)} 
+              <StepIndicator
+                step={3}
+                title="Vaga & Currículo"
+                isActive={currentStep === 3}
+                isCompleted={isStepValid(3)}
               />
             </div>
           </div>
@@ -296,7 +510,7 @@ export default function CandidatarSePage() {
           {/* Main Form */}
           <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
             <form onSubmit={handleSubmit} className="p-8 space-y-8">
-              
+
               {/* Step 1: Personal Information */}
               <div className={`space-y-6 transition-all duration-500 ${currentStep === 1 ? 'block' : 'hidden'}`}>
                 <div className="text-center mb-8">
@@ -309,14 +523,14 @@ export default function CandidatarSePage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Nome Completo</label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-blue-500" />
-                      <input 
-                        type="text" 
-                        name="nome" 
-                        value={formData.nome} 
-                        onChange={handleInputChange} 
+                      <input
+                        type="text"
+                        name="nome"
+                        value={formData.nome}
+                        onChange={handleInputChange}
                         placeholder="Digite seu nome completo"
                         className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white"
-                        required 
+                        required
                       />
                     </div>
                   </div>
@@ -325,15 +539,15 @@ export default function CandidatarSePage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">CPF</label>
                     <div className="relative">
                       <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-blue-500" />
-                      <input 
-                        type="text" 
-                        name="cpf" 
-                        value={formData.cpf} 
-                        onChange={handleInputChange} 
+                      <input
+                        type="text"
+                        name="cpf"
+                        value={formData.cpf}
+                        onChange={handleInputChange}
                         placeholder="000.000.000-00"
                         maxLength={14}
                         className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white"
-                        required 
+                        required
                       />
                     </div>
                   </div>
@@ -342,14 +556,14 @@ export default function CandidatarSePage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">E-mail</label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-blue-500" />
-                      <input 
-                        type="email" 
-                        name="email" 
-                        value={formData.email} 
-                        onChange={handleInputChange} 
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
                         placeholder="seu@email.com"
                         className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white"
-                        required 
+                        required
                       />
                     </div>
                   </div>
@@ -358,15 +572,15 @@ export default function CandidatarSePage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">WhatsApp</label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-blue-500" />
-                      <input 
-                        type="tel" 
-                        name="telefone" 
-                        value={formData.telefone} 
-                        onChange={handleInputChange} 
+                      <input
+                        type="tel"
+                        name="telefone"
+                        value={formData.telefone}
+                        onChange={handleInputChange}
                         placeholder="(00) 00000-0000"
                         maxLength={15}
                         className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white"
-                        required 
+                        required
                       />
                     </div>
                   </div>
@@ -375,7 +589,7 @@ export default function CandidatarSePage() {
                 <div className="flex justify-end">
                   <button
                     type="button"
-                    onClick={() => setCurrentStep(2)}
+                    onClick={() => handleStepChange(2)}
                     disabled={!isStepValid(1)}
                     className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-xl font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
                   >
@@ -396,16 +610,16 @@ export default function CandidatarSePage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">CEP</label>
                     <div className="relative">
                       <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-blue-500" />
-                      <input 
-                        type="text" 
-                        name="cep" 
-                        value={formData.cep} 
-                        onChange={handleInputChange} 
-                        onBlur={handleCepBlur} 
+                      <input
+                        type="text"
+                        name="cep"
+                        value={formData.cep}
+                        onChange={handleInputChange}
+                        onBlur={handleCepBlur}
                         placeholder="00000-000"
                         maxLength={9}
                         className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white"
-                        required 
+                        required
                       />
                     </div>
                   </div>
@@ -414,68 +628,68 @@ export default function CandidatarSePage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Rua</label>
                     <div className="relative">
                       <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-blue-500" />
-                      <input 
-                        type="text" 
-                        name="rua" 
-                        value={formData.rua} 
-                        onChange={handleInputChange} 
+                      <input
+                        type="text"
+                        name="rua"
+                        value={formData.rua}
+                        onChange={handleInputChange}
                         placeholder="Nome da rua"
                         className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white"
-                        required 
+                        required
                       />
                     </div>
                   </div>
 
                   <div className="group">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Número</label>
-                    <input 
-                      type="text" 
-                      name="numero" 
-                      value={formData.numero} 
-                      onChange={handleInputChange} 
+                    <input
+                      type="text"
+                      name="numero"
+                      value={formData.numero}
+                      onChange={handleInputChange}
                       placeholder="123"
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white"
-                      required 
+                      required
                     />
                   </div>
 
                   <div className="group">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Bairro</label>
-                    <input 
-                      type="text" 
-                      name="bairro" 
-                      value={formData.bairro} 
-                      onChange={handleInputChange} 
+                    <input
+                      type="text"
+                      name="bairro"
+                      value={formData.bairro}
+                      onChange={handleInputChange}
                       placeholder="Nome do bairro"
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white"
-                      required 
+                      required
                     />
                   </div>
 
                   <div className="group">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Cidade</label>
-                    <input 
-                      type="text" 
-                      name="cidade" 
-                      value={formData.cidade} 
-                      onChange={handleInputChange} 
+                    <input
+                      type="text"
+                      name="cidade"
+                      value={formData.cidade}
+                      onChange={handleInputChange}
                       placeholder="Nome da cidade"
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white"
-                      required 
+                      required
                     />
                   </div>
 
                   <div className="group">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
-                    <input 
-                      type="text" 
-                      name="estado" 
-                      value={formData.estado} 
-                      onChange={handleInputChange} 
+                    <input
+                      type="text"
+                      name="estado"
+                      value={formData.estado}
+                      onChange={handleInputChange}
                       placeholder="UF"
                       maxLength={2}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white"
-                      required 
+                      required
                     />
                   </div>
                 </div>
@@ -483,14 +697,14 @@ export default function CandidatarSePage() {
                 <div className="flex justify-between">
                   <button
                     type="button"
-                    onClick={() => setCurrentStep(1)}
+                    onClick={() => handleStepChange(1)}
                     className="bg-gray-200 text-gray-700 px-8 py-3 rounded-xl font-medium hover:bg-gray-300 transition-all duration-200"
                   >
                     Voltar
                   </button>
                   <button
                     type="button"
-                    onClick={() => setCurrentStep(3)}
+                    onClick={() => handleStepChange(3)}
                     disabled={!isStepValid(2)}
                     className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-xl font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
                   >
@@ -511,10 +725,10 @@ export default function CandidatarSePage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Cargo Pretendido</label>
                     <div className="relative">
                       <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-blue-500 z-10" />
-                      <select 
-                        name="cargo" 
-                        required 
-                        value={formData.cargo} 
+                      <select
+                        name="cargo"
+                        required
+                        value={formData.cargo}
                         onChange={handleInputChange}
                         className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white appearance-none"
                       >
@@ -531,7 +745,7 @@ export default function CandidatarSePage() {
                       Currículo (APENAS PDF)
                       <span className="text-red-500 ml-1">*</span>
                     </label>
-                    
+
                     {/* Aviso sobre formato */}
                     <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
                       <div className="flex items-center gap-2">
@@ -544,7 +758,7 @@ export default function CandidatarSePage() {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="relative">
                       <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors duration-200 bg-gray-50 hover:bg-blue-50">
                         <UploadCloud className="mx-auto h-12 w-12 text-gray-400 mb-4" />
@@ -552,14 +766,14 @@ export default function CandidatarSePage() {
                           <div className="flex justify-center">
                             <label htmlFor="file-upload" className="cursor-pointer bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200">
                               <span>Escolher arquivo PDF</span>
-                              <input 
-                                id="file-upload" 
-                                name="curriculo" 
-                                type="file" 
-                                className="sr-only" 
-                                required 
-                                onChange={handleFileChange} 
-                                accept="application/pdf,.pdf" 
+                              <input
+                                id="file-upload"
+                                name="curriculo"
+                                type="file"
+                                className="sr-only"
+                                required
+                                onChange={handleFileChange}
+                                accept="application/pdf,.pdf"
                               />
                             </label>
                           </div>
@@ -583,13 +797,13 @@ export default function CandidatarSePage() {
 
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
                     <div className="flex items-start gap-3">
-                      <input 
-                        id="declaracao" 
-                        name="declaracao" 
-                        type="checkbox" 
-                        className="mt-1 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" 
-                        checked={declaracao} 
-                        onChange={(e) => setDeclaracao(e.target.checked)} 
+                      <input
+                        id="declaracao"
+                        name="declaracao"
+                        type="checkbox"
+                        className="mt-1 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                        checked={declaracao}
+                        onChange={(e) => setDeclaracao(e.target.checked)}
                       />
                       <label htmlFor="declaracao" className="text-sm text-gray-700 leading-relaxed">
                         <span className="font-medium">DECLARO</span> que todas as informações fornecidas são verdadeiras e estou ciente de que declarações falsas implicarão na eliminação do processo seletivo. Autorizo o uso dos meus dados para fins de recrutamento e seleção.
@@ -601,14 +815,14 @@ export default function CandidatarSePage() {
                 <div className="flex justify-between pt-4">
                   <button
                     type="button"
-                    onClick={() => setCurrentStep(2)}
+                    onClick={() => handleStepChange(2)}
                     className="bg-gray-200 text-gray-700 px-8 py-3 rounded-xl font-medium hover:bg-gray-300 transition-all duration-200"
                   >
                     Voltar
                   </button>
-                  <button 
-                    type="submit" 
-                    disabled={!declaracao || !curriculo || isLoading || !isStepValid(3)} 
+                  <button
+                    type="submit"
+                    disabled={!declaracao || !curriculo || isLoading || !isStepValid(3)}
                     className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-8 py-3 rounded-xl font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2 min-w-[200px] justify-center"
                   >
                     {isLoading ? (
