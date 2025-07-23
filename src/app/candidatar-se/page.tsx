@@ -533,7 +533,7 @@ export default function CandidatarSePage() {
                         value={formData.nome}
                         onChange={handleInputChange}
                         placeholder="Digite seu nome completo"
-                        className="w-full pl-10 sm:pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
+                        className="w-full pl-10 sm:pl-11 pr-4 py-3 border text-gray-600 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
                         required
                       />
                     </div>
@@ -550,7 +550,7 @@ export default function CandidatarSePage() {
                         onChange={handleInputChange}
                         placeholder="000.000.000-00"
                         maxLength={14}
-                        className="w-full pl-10 sm:pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
+                        className="w-full pl-10 sm:pl-11 pr-4 text-gray-600 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
                         required
                       />
                     </div>
@@ -566,7 +566,7 @@ export default function CandidatarSePage() {
                         value={formData.email}
                         onChange={handleInputChange}
                         placeholder="seu@email.com"
-                        className="w-full pl-10 sm:pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
+                        className="w-full pl-10 sm:pl-11 pr-4 py-3 text-gray-600 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
                         required
                       />
                     </div>
@@ -583,7 +583,7 @@ export default function CandidatarSePage() {
                         onChange={handleInputChange}
                         placeholder="(00) 00000-0000"
                         maxLength={15}
-                        className="w-full pl-10 sm:pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
+                        className="w-full pl-10 sm:pl-11 pr-4 py-3 border text-gray-600 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
                         required
                       />
                     </div>
@@ -622,7 +622,7 @@ export default function CandidatarSePage() {
                         onBlur={handleCepBlur}
                         placeholder="00000-000"
                         maxLength={9}
-                        className="w-full pl-10 sm:pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
+                        className="w-full pl-10 sm:pl-11 pr-4 text-gray-600 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
                         required
                       />
                     </div>
@@ -638,7 +638,7 @@ export default function CandidatarSePage() {
                         value={formData.rua}
                         onChange={handleInputChange}
                         placeholder="Nome da rua"
-                        className="w-full pl-10 sm:pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
+                        className="w-full pl-10 sm:pl-11 pr-4 py-3 border text-gray-600 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
                         required
                       />
                     </div>
@@ -652,7 +652,7 @@ export default function CandidatarSePage() {
                       value={formData.numero}
                       onChange={handleInputChange}
                       placeholder="123"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
                       required
                     />
                   </div>
@@ -665,7 +665,7 @@ export default function CandidatarSePage() {
                       value={formData.bairro}
                       onChange={handleInputChange}
                       placeholder="Nome do bairro"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 text-gray-600 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
                       required
                     />
                   </div>
@@ -678,7 +678,7 @@ export default function CandidatarSePage() {
                       value={formData.cidade}
                       onChange={handleInputChange}
                       placeholder="Nome da cidade"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
+                      className="w-full px-4 py-3 border text-gray-600 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
                       required
                     />
                   </div>
@@ -692,7 +692,7 @@ export default function CandidatarSePage() {
                       onChange={handleInputChange}
                       placeholder="UF"
                       maxLength={2}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
+                      className="w-full px-4 py-3 border text-gray-600 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
                       required
                     />
                   </div>
@@ -734,7 +734,7 @@ export default function CandidatarSePage() {
                         required
                         value={formData.cargo}
                         onChange={handleInputChange}
-                        className="w-full pl-10 sm:pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white appearance-none text-sm sm:text-base"
+                        className="w-full pl-10 sm:pl-11 pr-4 py-3 border text-gray-600 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white appearance-none text-sm sm:text-base"
                       >
                         <option value="" disabled>Selecione o cargo pretendido</option>
                         {cargosDisponiveis.map(c => (
