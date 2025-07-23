@@ -1,4 +1,4 @@
-//src/app/candidatar-se/page.tsx (COM ANALYTICS)
+//src/app/candidatar-se/page.tsx (COM ANALYTICS - SEM DEBUG)
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
@@ -53,7 +53,7 @@ export default function CandidatarSePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
 
-  // 🎯 ANALYTICS: Implementar tracking por step
+  // 🎯 ANALYTICS: Implementar tracking por step (sem debug visível)
   const analytics = useStepAnalytics('upload_curriculo', currentStep);
   const [camposPreenchidos, setCamposPreenchidos] = useState<Set<string>>(new Set());
   const [tempoInicioStep, setTempoInicioStep] = useState<number>(Date.now());
@@ -427,15 +427,15 @@ export default function CandidatarSePage() {
   const StepIndicator = ({ step, title, isActive, isCompleted }: { step: number, title: string, isActive: boolean, isCompleted: boolean }) => (
     <div className="flex items-center">
       <div className={`
-        flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300
+        flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 transition-all duration-300
         ${isCompleted ? 'bg-emerald-500 border-emerald-500 text-white' :
           isActive ? 'bg-blue-600 border-blue-600 text-white' :
             'bg-gray-100 border-gray-300 text-gray-400'}
       `}>
-        {isCompleted ? <CheckCircle className="w-5 h-5" /> : step}
+        {isCompleted ? <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" /> : <span className="text-xs sm:text-sm font-medium">{step}</span>}
       </div>
-      <div className="ml-3">
-        <p className={`text-sm font-medium ${isActive ? 'text-blue-600' : isCompleted ? 'text-emerald-600' : 'text-gray-400'}`}>
+      <div className="ml-2 sm:ml-3 hidden sm:block">
+        <p className={`text-xs sm:text-sm font-medium ${isActive ? 'text-blue-600' : isCompleted ? 'text-emerald-600' : 'text-gray-400'}`}>
           {title}
         </p>
       </div>
@@ -457,28 +457,20 @@ export default function CandidatarSePage() {
         }}
       />
 
-      {/* 🔍 DEBUG: Analytics info - remover em produção */}
-      <div className="fixed bottom-4 right-4 bg-black text-white p-2 rounded text-xs z-50 opacity-75">
-        <div>📊 Session: {analytics.sessionId.slice(-8)}</div>
-        <div>📍 Step: {currentStep}/3</div>
-        <div>✅ Campos: {camposPreenchidos.size}</div>
-        <div>📝 Tipo: upload_curriculo</div>
-      </div>
-
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
         {/* Header with gradient */}
-        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white py-8">
+        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white py-6 sm:py-8">
           <div className="max-w-4xl mx-auto px-4">
             <div className="text-center">
-              <h1 className="text-4xl font-bold mb-2">Trabalhe Conosco</h1>
-              <p className="text-blue-100 text-lg">Faça parte da nossa equipe de sucesso</p>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">Trabalhe Conosco</h1>
+              <p className="text-blue-100 text-sm sm:text-base md:text-lg">Faça parte da nossa equipe de sucesso</p>
             </div>
           </div>
         </div>
 
-        <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto px-4 py-4 sm:py-6 md:py-8">
           {/* Progress Steps */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-6 sm:mb-8">
             <div className="flex justify-between items-center">
               <StepIndicator
                 step={1}
@@ -486,7 +478,7 @@ export default function CandidatarSePage() {
                 isActive={currentStep === 1}
                 isCompleted={isStepValid(1)}
               />
-              <div className="flex-1 h-1 bg-gray-200 mx-4 rounded-full">
+              <div className="flex-1 h-1 bg-gray-200 mx-2 sm:mx-4 rounded-full">
                 <div className={`h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-500 ${isStepValid(1) ? 'w-full' : 'w-0'}`}></div>
               </div>
               <StepIndicator
@@ -495,7 +487,7 @@ export default function CandidatarSePage() {
                 isActive={currentStep === 2}
                 isCompleted={isStepValid(2)}
               />
-              <div className="flex-1 h-1 bg-gray-200 mx-4 rounded-full">
+              <div className="flex-1 h-1 bg-gray-200 mx-2 sm:mx-4 rounded-full">
                 <div className={`h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-500 ${isStepValid(2) ? 'w-full' : 'w-0'}`}></div>
               </div>
               <StepIndicator
@@ -505,40 +497,52 @@ export default function CandidatarSePage() {
                 isCompleted={isStepValid(3)}
               />
             </div>
+            
+            {/* Mobile step indicator */}
+            <div className="mt-4 sm:hidden">
+              <div className="text-center">
+                <p className="text-sm font-medium text-gray-600">
+                  {currentStep === 1 && 'Dados Pessoais'}
+                  {currentStep === 2 && 'Endereço'}
+                  {currentStep === 3 && 'Vaga & Currículo'}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">Etapa {currentStep} de 3</p>
+              </div>
+            </div>
           </div>
 
           {/* Main Form */}
           <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-            <form onSubmit={handleSubmit} className="p-8 space-y-8">
+            <form onSubmit={handleSubmit} className="p-4 sm:p-6 md:p-8 space-y-6 sm:space-y-8">
 
               {/* Step 1: Personal Information */}
-              <div className={`space-y-6 transition-all duration-500 ${currentStep === 1 ? 'block' : 'hidden'}`}>
-                <div className="text-center mb-8">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Informações Pessoais</h2>
-                  <p className="text-gray-600">Vamos começar com seus dados básicos</p>
+              <div className={`space-y-4 sm:space-y-6 transition-all duration-500 ${currentStep === 1 ? 'block' : 'hidden'}`}>
+                <div className="text-center mb-6 sm:mb-8">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Informações Pessoais</h2>
+                  <p className="text-sm sm:text-base text-gray-600">Vamos começar com seus dados básicos</p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="group">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                  <div className="group sm:col-span-2 md:col-span-1">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Nome Completo</label>
                     <div className="relative">
-                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-blue-500" />
+                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5 transition-colors group-focus-within:text-blue-500" />
                       <input
                         type="text"
                         name="nome"
                         value={formData.nome}
                         onChange={handleInputChange}
                         placeholder="Digite seu nome completo"
-                        className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white"
+                        className="w-full pl-10 sm:pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
                         required
                       />
                     </div>
                   </div>
 
-                  <div className="group">
+                  <div className="group sm:col-span-2 md:col-span-1">
                     <label className="block text-sm font-medium text-gray-700 mb-2">CPF</label>
                     <div className="relative">
-                      <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-blue-500" />
+                      <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5 transition-colors group-focus-within:text-blue-500" />
                       <input
                         type="text"
                         name="cpf"
@@ -546,32 +550,32 @@ export default function CandidatarSePage() {
                         onChange={handleInputChange}
                         placeholder="000.000.000-00"
                         maxLength={14}
-                        className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white"
+                        className="w-full pl-10 sm:pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
                         required
                       />
                     </div>
                   </div>
 
-                  <div className="group">
+                  <div className="group sm:col-span-2 md:col-span-1">
                     <label className="block text-sm font-medium text-gray-700 mb-2">E-mail</label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-blue-500" />
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5 transition-colors group-focus-within:text-blue-500" />
                       <input
                         type="email"
                         name="email"
                         value={formData.email}
                         onChange={handleInputChange}
                         placeholder="seu@email.com"
-                        className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white"
+                        className="w-full pl-10 sm:pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
                         required
                       />
                     </div>
                   </div>
 
-                  <div className="group">
+                  <div className="group sm:col-span-2 md:col-span-1">
                     <label className="block text-sm font-medium text-gray-700 mb-2">WhatsApp</label>
                     <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-blue-500" />
+                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5 transition-colors group-focus-within:text-blue-500" />
                       <input
                         type="tel"
                         name="telefone"
@@ -579,19 +583,19 @@ export default function CandidatarSePage() {
                         onChange={handleInputChange}
                         placeholder="(00) 00000-0000"
                         maxLength={15}
-                        className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white"
+                        className="w-full pl-10 sm:pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
                         required
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="flex justify-end">
+                <div className="flex justify-center sm:justify-end pt-4">
                   <button
                     type="button"
                     onClick={() => handleStepChange(2)}
                     disabled={!isStepValid(1)}
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-xl font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
+                    className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 sm:px-8 py-3 rounded-xl font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 text-sm sm:text-base"
                   >
                     Próximo <ArrowRight className="w-4 h-4" />
                   </button>
@@ -599,17 +603,17 @@ export default function CandidatarSePage() {
               </div>
 
               {/* Step 2: Address */}
-              <div className={`space-y-6 transition-all duration-500 ${currentStep === 2 ? 'block' : 'hidden'}`}>
-                <div className="text-center mb-8">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Endereço</h2>
-                  <p className="text-gray-600">Informe seu endereço completo</p>
+              <div className={`space-y-4 sm:space-y-6 transition-all duration-500 ${currentStep === 2 ? 'block' : 'hidden'}`}>
+                <div className="text-center mb-6 sm:mb-8">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Endereço</h2>
+                  <p className="text-sm sm:text-base text-gray-600">Informe seu endereço completo</p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   <div className="group">
                     <label className="block text-sm font-medium text-gray-700 mb-2">CEP</label>
                     <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-blue-500" />
+                      <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5 transition-colors group-focus-within:text-blue-500" />
                       <input
                         type="text"
                         name="cep"
@@ -618,23 +622,23 @@ export default function CandidatarSePage() {
                         onBlur={handleCepBlur}
                         placeholder="00000-000"
                         maxLength={9}
-                        className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white"
+                        className="w-full pl-10 sm:pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
                         required
                       />
                     </div>
                   </div>
 
-                  <div className="group md:col-span-2">
+                  <div className="group sm:col-span-2 lg:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Rua</label>
                     <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-blue-500" />
+                      <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5 transition-colors group-focus-within:text-blue-500" />
                       <input
                         type="text"
                         name="rua"
                         value={formData.rua}
                         onChange={handleInputChange}
                         placeholder="Nome da rua"
-                        className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white"
+                        className="w-full pl-10 sm:pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
                         required
                       />
                     </div>
@@ -648,7 +652,7 @@ export default function CandidatarSePage() {
                       value={formData.numero}
                       onChange={handleInputChange}
                       placeholder="123"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
                       required
                     />
                   </div>
@@ -661,7 +665,7 @@ export default function CandidatarSePage() {
                       value={formData.bairro}
                       onChange={handleInputChange}
                       placeholder="Nome do bairro"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
                       required
                     />
                   </div>
@@ -674,7 +678,7 @@ export default function CandidatarSePage() {
                       value={formData.cidade}
                       onChange={handleInputChange}
                       placeholder="Nome da cidade"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
                       required
                     />
                   </div>
@@ -688,17 +692,17 @@ export default function CandidatarSePage() {
                       onChange={handleInputChange}
                       placeholder="UF"
                       maxLength={2}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
                       required
                     />
                   </div>
                 </div>
 
-                <div className="flex justify-between">
+                <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-0 pt-4">
                   <button
                     type="button"
                     onClick={() => handleStepChange(1)}
-                    className="bg-gray-200 text-gray-700 px-8 py-3 rounded-xl font-medium hover:bg-gray-300 transition-all duration-200"
+                    className="w-full sm:w-auto order-2 sm:order-1 bg-gray-200 text-gray-700 px-6 sm:px-8 py-3 rounded-xl font-medium hover:bg-gray-300 transition-all duration-200 text-sm sm:text-base"
                   >
                     Voltar
                   </button>
@@ -706,7 +710,7 @@ export default function CandidatarSePage() {
                     type="button"
                     onClick={() => handleStepChange(3)}
                     disabled={!isStepValid(2)}
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-xl font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
+                    className="w-full sm:w-auto order-1 sm:order-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 sm:px-8 py-3 rounded-xl font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 text-sm sm:text-base"
                   >
                     Próximo <ArrowRight className="w-4 h-4" />
                   </button>
@@ -714,23 +718,23 @@ export default function CandidatarSePage() {
               </div>
 
               {/* Step 3: Job & Resume */}
-              <div className={`space-y-6 transition-all duration-500 ${currentStep === 3 ? 'block' : 'hidden'}`}>
-                <div className="text-center mb-8">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Vaga & Currículo</h2>
-                  <p className="text-gray-600">Escolha a vaga e anexe seu currículo em PDF</p>
+              <div className={`space-y-4 sm:space-y-6 transition-all duration-500 ${currentStep === 3 ? 'block' : 'hidden'}`}>
+                <div className="text-center mb-6 sm:mb-8">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Vaga & Currículo</h2>
+                  <p className="text-sm sm:text-base text-gray-600">Escolha a vaga e anexe seu currículo em PDF</p>
                 </div>
 
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                   <div className="group">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Cargo Pretendido</label>
                     <div className="relative">
-                      <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-blue-500 z-10" />
+                      <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5 transition-colors group-focus-within:text-blue-500 z-10" />
                       <select
                         name="cargo"
                         required
                         value={formData.cargo}
                         onChange={handleInputChange}
-                        className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white appearance-none"
+                        className="w-full pl-10 sm:pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white appearance-none text-sm sm:text-base"
                       >
                         <option value="" disabled>Selecione o cargo pretendido</option>
                         {cargosDisponiveis.map(c => (
@@ -747,12 +751,12 @@ export default function CandidatarSePage() {
                     </label>
 
                     {/* Aviso sobre formato */}
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 sm:p-4 mb-4">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                         <div>
                           <p className="text-sm font-medium text-amber-800">Importante:</p>
-                          <p className="text-sm text-amber-700">
+                          <p className="text-xs sm:text-sm text-amber-700">
                             Apenas arquivos PDF são aceitos. Máximo 5MB.
                           </p>
                         </div>
@@ -760,11 +764,11 @@ export default function CandidatarSePage() {
                     </div>
 
                     <div className="relative">
-                      <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors duration-200 bg-gray-50 hover:bg-blue-50">
-                        <UploadCloud className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                      <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 sm:p-8 text-center hover:border-blue-400 transition-colors duration-200 bg-gray-50 hover:bg-blue-50">
+                        <UploadCloud className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mb-3 sm:mb-4" />
                         <div className="space-y-2">
                           <div className="flex justify-center">
-                            <label htmlFor="file-upload" className="cursor-pointer bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200">
+                            <label htmlFor="file-upload" className="cursor-pointer bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 sm:px-6 py-2 rounded-lg font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 text-sm sm:text-base">
                               <span>Escolher arquivo PDF</span>
                               <input
                                 id="file-upload"
@@ -779,60 +783,60 @@ export default function CandidatarSePage() {
                           </div>
                           {curriculo ? (
                             <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                              <p className="text-sm font-medium text-green-800 flex items-center gap-2">
+                              <p className="text-sm font-medium text-green-800 flex items-center justify-center gap-2">
                                 <CheckCircle className="w-4 h-4" />
-                                {curriculo.name}
+                                <span className="truncate max-w-xs">{curriculo.name}</span>
                               </p>
                               <p className="text-xs text-green-600 mt-1">
                                 {(curriculo.size / 1024 / 1024).toFixed(2)} MB - PDF válido
                               </p>
                             </div>
                           ) : (
-                            <p className="text-sm text-gray-500">Apenas PDF • Máximo 5MB</p>
+                            <p className="text-xs sm:text-sm text-gray-500">Apenas PDF • Máximo 5MB</p>
                           )}
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 sm:p-6">
                     <div className="flex items-start gap-3">
                       <input
                         id="declaracao"
                         name="declaracao"
                         type="checkbox"
-                        className="mt-1 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                        className="mt-1 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 flex-shrink-0"
                         checked={declaracao}
                         onChange={(e) => setDeclaracao(e.target.checked)}
                       />
-                      <label htmlFor="declaracao" className="text-sm text-gray-700 leading-relaxed">
+                      <label htmlFor="declaracao" className="text-xs sm:text-sm text-gray-700 leading-relaxed">
                         <span className="font-medium">DECLARO</span> que todas as informações fornecidas são verdadeiras e estou ciente de que declarações falsas implicarão na eliminação do processo seletivo. Autorizo o uso dos meus dados para fins de recrutamento e seleção.
                       </label>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex justify-between pt-4">
+                <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-0 pt-4">
                   <button
                     type="button"
                     onClick={() => handleStepChange(2)}
-                    className="bg-gray-200 text-gray-700 px-8 py-3 rounded-xl font-medium hover:bg-gray-300 transition-all duration-200"
+                    className="w-full sm:w-auto order-2 sm:order-1 bg-gray-200 text-gray-700 px-6 sm:px-8 py-3 rounded-xl font-medium hover:bg-gray-300 transition-all duration-200 text-sm sm:text-base"
                   >
                     Voltar
                   </button>
                   <button
                     type="submit"
                     disabled={!declaracao || !curriculo || isLoading || !isStepValid(3)}
-                    className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-8 py-3 rounded-xl font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2 min-w-[200px] justify-center"
+                    className="w-full sm:w-auto order-1 sm:order-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 sm:px-8 py-3 rounded-xl font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 min-w-[200px] text-sm sm:text-base"
                   >
                     {isLoading ? (
                       <>
-                        <Loader2 className="animate-spin h-5 w-5" />
+                        <Loader2 className="animate-spin h-4 w-4 sm:h-5 sm:w-5" />
                         Enviando...
                       </>
                     ) : (
                       <>
-                        <CheckCircle className="w-5 h-5" />
+                        <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                         Enviar Candidatura
                       </>
                     )}
