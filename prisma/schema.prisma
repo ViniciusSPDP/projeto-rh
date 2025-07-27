@@ -67,6 +67,7 @@ model Candidatos {
   situacaoCandidato                 String?
   opcionalCandidato                 String?
   observacaoCandidato               String?
+  curriculoUrl              String?
   observacaoUpdatedAt         DateTime?
 
   vagas VagaCandidato[]
@@ -134,4 +135,49 @@ model ImageTemplate {
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+}
+
+model FormularioAnalytics {
+  id          String   @id @default(cuid())
+  sessionId   String   // ID da sessão do usuário
+  tipoForm    String   // 'upload_curriculo' ou 'manual_dados'
+  evento      String   // 'abertura', 'preenchimento', 'envio'
+  etapa       String?  // 'step_1', 'step_2', 'step_3' (para formulários multi-step)
+  userAgent   String?  // Navegador do usuário
+  ip          String?  // IP do usuário (opcional)
+  dadosEvento Json?    // Dados extras do evento
+  createdAt   DateTime @default(now())
+  
+  @@map("formulario_analytics")
+  @@index([tipoForm, evento])
+  @@index([sessionId])
+  @@index([createdAt])
+}
+
+model ConversaoFunil {
+  id              String   @id @default(cuid())
+  sessionId       String   @unique
+  tipoForm        String   // 'upload_curriculo' ou 'manual_dados'
+  
+  // Timestamps dos eventos
+  aberturaAt      DateTime?
+  preenchimentoAt DateTime?
+  envioAt         DateTime?
+  
+  // Dados de conversão
+  tempoTotal      Int?     // Tempo total em segundos
+  etapasVisitadas Json?    // Quais etapas foram visitadas
+  abandonouEm     String?  // Em qual etapa abandonou
+  
+  // Dados demográficos/técnicos
+  userAgent       String?
+  ip              String?
+  cidade          String?  // Se conseguir detectar pela localização
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("conversao_funil")
+  @@index([tipoForm])
+  @@index([createdAt])
 }

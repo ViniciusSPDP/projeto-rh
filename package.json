@@ -6,7 +6,10 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "setup": "node scripts/setup-directories.js",
+    "build:production": "npm run setup && npm run build",
+    "deploy": "npm run build:production && npm start"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.9.1",
@@ -30,7 +33,8 @@
     "react-icons": "^5.5.0",
     "react-imask": "^7.6.1",
     "react-konva": "^19.0.7",
-    "sharp": "^0.34.3"
+    "sharp": "^0.34.3",
+    "recharts": "^3.1.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
