@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  
+
   // Configuração para headers de segurança dos PDFs
   async headers() {
     return [
@@ -53,7 +53,7 @@ const nextConfig: NextConfig = {
 
   // CORRIGIDO: serverComponentsExternalPackages movido para serverExternalPackages
   serverExternalPackages: ['prisma'],
-  
+
   // Configuração de imagens otimizada para VPS
   images: {
     domains: ['localhost', '192.168.1.42'],
@@ -79,9 +79,15 @@ const nextConfig: NextConfig = {
   // Otimizações de produção
   poweredByHeader: false,
   compress: true,
-  
-  // Configuração de bundle para otimizar o Prisma
+
+  // Configuração de bundle para otimizar o Prisma + canvas no client
   webpack: (config, { dev, isServer }) => {
+    // canvas: evitar empacotamento no client
+    if (!isServer) {
+      config.externals = config.externals || [];
+      config.externals.push('canvas');
+    }
+
     // Otimizações apenas para produção
     if (!dev && !isServer) {
       config.optimization.splitChunks = {
@@ -98,18 +104,17 @@ const nextConfig: NextConfig = {
         },
       };
     }
+
     return config;
   },
 
   // Configuração de TypeScript
   typescript: {
-    // Não falhar o build por erros de TypeScript em produção (opcional)
     ignoreBuildErrors: false,
   },
 
   // Configuração do ESLint
   eslint: {
-    // Não falhar o build por warnings de ESLint em produção (opcional)
     ignoreDuringBuilds: false,
   },
 };
