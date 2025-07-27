@@ -16,8 +16,17 @@ import {
   Eye,
   Download,
   ArrowLeft,
-  Info
+  Info,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Square,
+  ToggleLeft,
+  ToggleRight
 } from 'lucide-react';
+
+// Import dos tipos
+import { TextElement } from '@/types/types';
 
 // CARREGAMENTO DINÂMICO: Importa o editor apenas no lado do cliente
 const TemplateEditor = dynamic(() => import('@/app/components/TemplateEditor'), {
@@ -31,18 +40,6 @@ const TemplateEditor = dynamic(() => import('@/app/components/TemplateEditor'), 
     </div>
   ),
 });
-
-// Definindo o tipo para os nossos elementos de texto
-interface TextElement {
-  id: string;
-  x: number;
-  y: number;
-  text: string;
-  fontSize: number;
-  fill: string;
-  fontFamily?: string;
-  fontStyle?: string;
-}
 
 export default function NovoTemplateDeImagemPage() {
   const router = useRouter();
@@ -87,6 +84,7 @@ export default function NovoTemplateDeImagemPage() {
       if (!response.ok) throw new Error('Falha no upload da imagem');
 
       const data = await response.json();
+      console.log('RESPOSTA DA API:', data); 
       setBackgroundImageUrl(data.url);
     } catch (error) {
       console.error(error);
@@ -104,6 +102,15 @@ export default function NovoTemplateDeImagemPage() {
       fill: '#1f2937',
       fontFamily: 'Arial',
       fontStyle: 'normal',
+      // NOVAS PROPRIEDADES para área delimitada
+      width: 300,
+      height: 100,
+      align: 'left',
+      verticalAlign: 'top',
+      padding: 10,
+      wrap: 'word',
+      showBounds: true,
+      boundsColor: '#3b82f6'
     };
     setElements([...elements, newText]);
     setSelectedElementId(newText.id);
@@ -298,7 +305,7 @@ export default function NovoTemplateDeImagemPage() {
                           {element.text}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {element.fontSize}px • {element.fill}
+                          {element.fontSize}px • {element.align} • {element.width}×{element.height}px
                         </p>
                       </div>
                       <div className="flex items-center gap-1 ml-2">
@@ -353,72 +360,185 @@ export default function NovoTemplateDeImagemPage() {
                     <textarea
                       value={selectedElement.text}
                       onChange={(e) => handleUpdateElement(selectedElement.id, { text: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border text-gray-600 border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       rows={3}
                       placeholder="Digite o texto..."
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
+                  {/* NOVA SEÇÃO: Área de Texto */}
+                  <div className="border-t pt-4">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <Square className="w-4 h-4" />
+                      Área de Texto
+                    </h4>
+                    
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Largura
+                        </label>
+                        <input
+                          type="number"
+                          value={selectedElement.width || 300}
+                          onChange={(e) => handleUpdateElement(selectedElement.id, { width: parseInt(e.target.value) })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          min="50"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Altura
+                        </label>
+                        <input
+                          type="number"
+                          value={selectedElement.height || 100}
+                          onChange={(e) => handleUpdateElement(selectedElement.id, { height: parseInt(e.target.value) })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          min="30"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Controles de Alinhamento */}
+                    <div className="mb-3">
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Tamanho
+                        Alinhamento Horizontal
                       </label>
-                      <input
-                        type="number"
-                        value={selectedElement.fontSize}
-                        onChange={(e) => handleUpdateElement(selectedElement.id, { fontSize: parseInt(e.target.value) })}
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => handleUpdateElement(selectedElement.id, { align: 'left' })}
+                          className={`flex-1 p-2 rounded-lg border transition-colors ${
+                            selectedElement.align === 'left' 
+                              ? 'bg-blue-100 border-blue-500 text-blue-700' 
+                              : 'bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          <AlignLeft className="w-4 h-4 mx-auto" />
+                        </button>
+                        <button
+                          onClick={() => handleUpdateElement(selectedElement.id, { align: 'center' })}
+                          className={`flex-1 p-2 rounded-lg border transition-colors ${
+                            selectedElement.align === 'center' 
+                              ? 'bg-blue-100 border-blue-500 text-blue-700' 
+                              : 'bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          <AlignCenter className="w-4 h-4 mx-auto" />
+                        </button>
+                        <button
+                          onClick={() => handleUpdateElement(selectedElement.id, { align: 'right' })}
+                          className={`flex-1 p-2 rounded-lg border transition-colors ${
+                            selectedElement.align === 'right' 
+                              ? 'bg-blue-100 border-blue-500 text-blue-700' 
+                              : 'bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          <AlignRight className="w-4 h-4 mx-auto" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Alinhamento Vertical */}
+                    <div className="mb-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Alinhamento Vertical
+                      </label>
+                      <select
+                        value={selectedElement.verticalAlign || 'top'}
+                        onChange={(e) => handleUpdateElement(selectedElement.id, { verticalAlign: e.target.value as 'top' | 'middle' | 'bottom' })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        min="8"
-                        max="200"
-                      />
+                      >
+                        <option value="top">Topo</option>
+                        <option value="middle">Meio</option>
+                        <option value="bottom">Baixo</option>
+                      </select>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Cor
+                    {/* Toggle para mostrar bordas */}
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-gray-700">
+                        Mostrar Bordas da Área
                       </label>
-                      <input
-                        type="color"
-                        value={selectedElement.fill}
-                        onChange={(e) => handleUpdateElement(selectedElement.id, { fill: e.target.value })}
-                        className="w-full h-10 border border-gray-300 rounded-lg shadow-sm cursor-pointer"
-                      />
+                      <button
+                        onClick={() => handleUpdateElement(selectedElement.id, { showBounds: !selectedElement.showBounds })}
+                        className={`p-1 rounded transition-colors ${
+                          selectedElement.showBounds 
+                            ? 'text-blue-600' 
+                            : 'text-gray-400'
+                        }`}
+                      >
+                        {selectedElement.showBounds ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
+                      </button>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Fonte
-                    </label>
-                    <select
-                      value={selectedElement.fontFamily || 'Arial'}
-                      onChange={(e) => handleUpdateElement(selectedElement.id, { fontFamily: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="Arial">Arial</option>
-                      <option value="Helvetica">Helvetica</option>
-                      <option value="Georgia">Georgia</option>
-                      <option value="Times New Roman">Times New Roman</option>
-                      <option value="Verdana">Verdana</option>
-                      <option value="Courier New">Courier New</option>
-                    </select>
-                  </div>
+                  {/* Propriedades de Fonte */}
+                  <div className="border-t pt-4">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3">Fonte</h4>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Tamanho
+                        </label>
+                        <input
+                          type="number"
+                          value={selectedElement.fontSize}
+                          onChange={(e) => handleUpdateElement(selectedElement.id, { fontSize: parseInt(e.target.value) })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          min="8"
+                          max="200"
+                        />
+                      </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Estilo
-                    </label>
-                    <select
-                      value={selectedElement.fontStyle || 'normal'}
-                      onChange={(e) => handleUpdateElement(selectedElement.id, { fontStyle: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="normal">Normal</option>
-                      <option value="bold">Negrito</option>
-                      <option value="italic">Itálico</option>
-                      <option value="bold italic">Negrito Itálico</option>
-                    </select>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Cor
+                        </label>
+                        <input
+                          type="color"
+                          value={selectedElement.fill}
+                          onChange={(e) => handleUpdateElement(selectedElement.id, { fill: e.target.value })}
+                          className="w-full h-10 border border-gray-300 rounded-lg shadow-sm cursor-pointer"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Família da Fonte
+                      </label>
+                      <select
+                        value={selectedElement.fontFamily || 'Arial'}
+                        onChange={(e) => handleUpdateElement(selectedElement.id, { fontFamily: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="Arial">Arial</option>
+                        <option value="Helvetica">Helvetica</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Verdana">Verdana</option>
+                        <option value="Courier New">Courier New</option>
+                      </select>
+                    </div>
+
+                    <div className="mt-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Estilo
+                      </label>
+                      <select
+                        value={selectedElement.fontStyle || 'normal'}
+                        onChange={(e) => handleUpdateElement(selectedElement.id, { fontStyle: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="normal">Normal</option>
+                        <option value="bold">Negrito</option>
+                        <option value="italic">Itálico</option>
+                        <option value="bold italic">Negrito Itálico</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               </div>

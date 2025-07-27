@@ -1,31 +1,12 @@
 'use client';
 
-import { Stage, Layer, Image as KonvaImage, Text as KonvaText, Transformer, Rect } from 'react-konva';
+import { Stage, Layer, Image as KonvaImage, Text as KonvaText, Rect, Group } from 'react-konva';
 import Konva from 'konva';
 import { useRef, useEffect, useState } from 'react';
 import { ZoomIn, ZoomOut, RotateCcw, Maximize2 } from 'lucide-react';
 
-// Definindo os tipos para as props e elementos
-interface TextElement {
-  id: string;
-  x: number;
-  y: number;
-  text: string;
-  fontSize: number;
-  fill: string;
-  fontFamily?: string;
-  fontStyle?: string;
-}
-
-interface TemplateEditorProps {
-  backgroundImage: HTMLImageElement | null;
-  elements: TextElement[];
-  selectedElementId: string | null;
-  onDragEnd: (e: Konva.KonvaEventObject<DragEvent>, id: string) => void;
-  onElementClick: (id: string) => void;
-  onElementUpdate?: (id: string, updates: Partial<TextElement>) => void;
-  previewMode?: boolean;
-}
+// Import dos tipos
+import { TextElement, TemplateEditorProps } from '@/types/types';
 
 export default function TemplateEditor({
   backgroundImage,
@@ -44,6 +25,259 @@ export default function TemplateEditor({
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
+
+  // Função para quebrar texto em linhas dentro da largura especificada
+  const wrapText = (text: string, maxWidth: number, fontSize: number, fontFamily: string): string[] => {
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+
+    // Criar um elemento temporário para medir o texto
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    if (!tempCtx) return [text];
+    
+    tempCtx.font = `${fontSize}px ${fontFamily}`;
+
+    for (const word of words) {
+      const testLine = currentLine + (currentLine ? ' ' : '') + word;
+      const metrics = tempCtx.measureText(testLine);
+      
+      if (metrics.width > maxWidth && currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+    
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+    
+    return lines.length > 0 ? lines : [text];
+  };
+
+  // Função para calcular a posição Y baseada no alinhamento vertical
+  const calculateVerticalOffset = (
+    element: TextElement, 
+    totalTextHeight: number
+  ): number => {
+    const height = element.height || 100;
+    const padding = element.padding || 10;
+    const availableHeight = height - (padding * 2);
+    
+    switch (element.verticalAlign) {
+      case 'middle':
+        return (availableHeight - totalTextHeight) / 2;
+      case 'bottom':
+        return availableHeight - totalTextHeight;
+      case 'top':
+      default:
+        return 0;
+    }
+  };
+
+  // Componente para renderizar texto com área delimitada FIXA
+  const TextWithBounds = ({ element }: { element: TextElement }) => {
+    const width = element.width || 300;
+    const height = element.height || 100;
+    const padding = element.padding || 10;
+    const showBounds = element.showBounds !== false; // default true
+    const boundsColor = element.boundsColor || '#3b82f6';
+
+    // Quebrar o texto em linhas
+    const maxTextWidth = width - (padding * 2);
+    const lines = wrapText(
+      element.text, 
+      maxTextWidth, 
+      element.fontSize, 
+      element.fontFamily || 'Arial'
+    );
+
+    // Calcular altura total do texto
+    const lineHeight = element.fontSize * 1.2; // 120% do tamanho da fonte
+    const totalTextHeight = lines.length * lineHeight;
+
+    // Calcular offset vertical
+    const verticalOffset = calculateVerticalOffset(element, totalTextHeight);
+
+    return (
+      <Group
+        x={element.x}
+        y={element.y}
+        draggable={!previewMode}
+        onDragStart={(e) => {
+          console.log('Drag iniciado:', element.id , 'Posição inicial:', e.target.x(), e.target.y());
+          // Mudar cursor para indicar movimento
+          if (stageRef.current) {
+            stageRef.current.container().style.cursor = 'move';
+          }
+        }}
+        onDragEnd={(e) => {
+          console.log('Drag finalizado:', element.id, 'Nova posição:', e.target.x(), e.target.y());
+          onDragEnd(e, element.id);
+          // Restaurar cursor
+          if (stageRef.current) {
+            stageRef.current.container().style.cursor = 'grab';
+          }
+        }}
+        onClick={(e) => {
+          e.cancelBubble = true;
+          if (!previewMode) {
+            console.log('Clicou no elemento:', element.id);
+            onElementClick(element.id);
+            
+            // DESABILITAR drag do canvas quando elemento está selecionado
+            if (stageRef.current) {
+              stageRef.current.draggable(false);
+            }
+          }
+        }}
+        onTap={(e) => {
+          e.cancelBubble = true;
+          if (!previewMode) {
+            onElementClick(element.id);
+            
+            // DESABILITAR drag do canvas quando elemento está selecionado
+            if (stageRef.current) {
+              stageRef.current.draggable(false);
+            }
+          }
+        }}
+        onMouseEnter={() => {
+          // Cursor pointer quando passa sobre elemento
+          if (stageRef.current && !previewMode) {
+            stageRef.current.container().style.cursor = 'pointer';
+          }
+        }}
+        onMouseLeave={() => {
+          // Voltar cursor normal
+          if (stageRef.current && !previewMode) {
+            stageRef.current.container().style.cursor = selectedElementId ? 'default' : 'grab';
+          }
+        }}
+      >
+        {/* ÚNICA ÁREA DELIMITADA (retângulo de fundo) */}
+        {showBounds && !previewMode && (
+          <Rect
+            width={width}
+            height={height}
+            fill="rgba(59, 130, 246, 0.1)"
+            stroke={boundsColor}
+            strokeWidth={selectedElementId === element.id ? 2 : 1}
+            dash={selectedElementId === element.id ? [5, 5] : [2, 2]}
+            cornerRadius={4}
+            listening={true} // PERMITIR CLIQUES na área para selecionar/arrastar
+          />
+        )}
+
+        {/* Renderizar cada linha de texto DENTRO da área fixa */}
+        {lines.map((line, index) => {
+          const textY = padding + verticalOffset + (index * lineHeight);
+          
+          // CORRIGIR ALINHAMENTO: Calcular posição X correta
+          let textX: number;
+          let konvaAlign: 'left' | 'center' | 'right' = 'left';
+          
+          if (element.align === 'center') {
+            textX = padding; // Começar do padding
+            konvaAlign = 'center';
+          } else if (element.align === 'right') {
+            textX = padding; // Começar do padding
+            konvaAlign = 'right';
+          } else {
+            textX = padding; // Começar do padding (left é default)
+            konvaAlign = 'left';
+          }
+
+          return (
+            <KonvaText
+              key={`${element.id}-line-${index}`}
+              text={line}
+              x={textX}
+              y={textY}
+              fontSize={element.fontSize}
+              fill={element.fill}
+              fontFamily={element.fontFamily || 'Arial'}
+              fontStyle={element.fontStyle || 'normal'}
+              align={konvaAlign}
+              width={maxTextWidth} // SEMPRE definir largura para alinhamento funcionar
+              // Sombra sutil para melhor legibilidade
+              shadowColor="rgba(0,0,0,0.1)"
+              shadowBlur={2}
+              shadowOffsetX={1}
+              shadowOffsetY={1}
+              // Desabilitar eventos para não interferir com o drag do grupo
+              listening={false}
+            />
+          );
+        })}
+
+        {/* Handle de redimensionamento APENAS quando selecionado */}
+        {selectedElementId === element.id && !previewMode && (
+          <>
+            {/* Canto inferior direito para redimensionar a ÁREA */}
+            <Rect
+              x={width - 10}
+              y={height - 10}
+              width={10}
+              height={10}
+              fill={boundsColor}
+              stroke="white"
+              strokeWidth={1}
+              cornerRadius={2}
+              draggable
+              onDragMove={(e) => {
+                const dragX = e.target.x();
+                const dragY = e.target.y();
+                
+                const newWidth = Math.max(80, dragX + 10);
+                const newHeight = Math.max(40, dragY + 10);
+                
+                if (onElementUpdate) {
+                  onElementUpdate(element.id, {
+                    width: newWidth,
+                    height: newHeight
+                  });
+                }
+              }}
+              onDragEnd={(e) => {
+                // Reset position of the resize handle
+                e.target.x(width - 10);
+                e.target.y(height - 10);
+              }}
+              listening={true} // Este pode escutar eventos
+            />
+            
+            {/* Indicador de tamanho da área */}
+            <KonvaText
+              x={width + 15}
+              y={height - 15}
+              text={`${width}×${height}px`}
+              fontSize={11}
+              fill="#666"
+              fontFamily="Arial"
+              listening={false}
+              opacity={0.8}
+            />
+            
+            {/* Indicador de alinhamento */}
+            <KonvaText
+              x={5}
+              y={-20}
+              text={`📍 ${element.align || 'left'}`}
+              fontSize={10}
+              fill={boundsColor}
+              fontFamily="Arial"
+              listening={false}
+              opacity={0.9}
+            />
+          </>
+        )}
+      </Group>
+    );
+  };
 
   // Atualiza o tamanho do container
   useEffect(() => {
@@ -71,64 +305,25 @@ export default function TemplateEditor({
     }
   }, [backgroundImage, containerSize]);
 
-  // Atualiza o transformer quando um elemento é selecionado
+  // Atualiza o transformer quando um elemento é selecionado (DESABILITADO)
   useEffect(() => {
-    if (selectedElementId && transformerRef.current && !previewMode) {
-      const stage = stageRef.current;
-      if (stage) {
-        const selectedNode = stage.findOne(`#${selectedElementId}`) as Konva.Text;
-        if (selectedNode) {
-          transformerRef.current.nodes([selectedNode]);
-          transformerRef.current.getLayer()?.batchDraw();
-        }
-      }
-    } else if (transformerRef.current) {
+    // Desabilitar transformer pois agora usamos apenas drag + resize handle
+    if (transformerRef.current) {
       transformerRef.current.nodes([]);
       transformerRef.current.getLayer()?.batchDraw();
     }
   }, [selectedElementId, previewMode]);
 
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    // Se clicou no stage (fundo), deseleciona elementos
+    // Se clicou no stage (fundo), deseleciona elementos E permite arrastar canvas
     if (e.target === e.target.getStage()) {
-      onElementClick('');
-    }
-  };
-
-  const handleTextClick = (e: Konva.KonvaEventObject<MouseEvent>, id: string) => {
-    e.cancelBubble = true;
-    if (!previewMode) {
-      onElementClick(id);
-    }
-  };
-
-  const handleTextTap = (e: Konva.KonvaEventObject<Event>, id: string) => {
-    e.cancelBubble = true;
-    if (!previewMode) {
-      onElementClick(id);
-    }
-  };
-
-  const handleTransform = (e: Konva.KonvaEventObject<Event>) => {
-    const node = e.target as Konva.Text;
-    const scaleX = node.scaleX();
-    const scaleY = node.scaleY();
-    
-    // Mantém a proporção do texto
-    node.scaleX(1);
-    node.scaleY(1);
-    
-    // Aplica o novo tamanho baseado na escala
-    const newFontSize = Math.max(8, node.fontSize() * Math.max(scaleX, scaleY));
-    node.fontSize(newFontSize);
-
-    // Atualiza o elemento no estado se houver callback
-    if (onElementUpdate) {
-      onElementUpdate(node.id(), { 
-        fontSize: newFontSize,
-        x: node.x(),
-        y: node.y()
-      });
+      console.log('Clicou no fundo - deselecionando e habilitando drag do canvas');
+      onElementClick(''); // Deseleciona elemento
+      
+      // Habilitar drag do canvas
+      if (stageRef.current) {
+        stageRef.current.draggable(true);
+      }
     }
   };
 
@@ -273,7 +468,7 @@ export default function TemplateEditor({
           scaleY={scale}
           x={position.x}
           y={position.y}
-          draggable={!previewMode}
+          draggable={!previewMode && selectedElementId === null} // SÓ ARRASTAR CANVAS SE NENHUM ELEMENTO ESTIVER SELECIONADO
           onClick={handleStageClick}
           onTap={handleStageClick}
           onWheel={handleWheel}
@@ -298,64 +493,12 @@ export default function TemplateEditor({
               />
             )}
             
-            {/* Elementos de texto */}
-            {elements.map((el) => (
-              <KonvaText
-                key={el.id}
-                id={el.id}
-                text={el.text}
-                x={el.x}
-                y={el.y}
-                fontSize={el.fontSize}
-                fill={el.fill}
-                fontFamily={el.fontFamily || 'Arial'}
-                fontStyle={el.fontStyle || 'normal'}
-                draggable={!previewMode}
-                onClick={(e) => handleTextClick(e, el.id)}
-                onTap={(e) => handleTextTap(e, el.id)}
-                onDragEnd={(e) => onDragEnd(e, el.id)}
-                onTransform={handleTransform}
-                // Estilo visual para elemento selecionado
-                stroke={selectedElementId === el.id && !previewMode ? '#3b82f6' : undefined}
-                strokeWidth={selectedElementId === el.id && !previewMode ? 1 : 0}
-                // Sombra sutil para melhor legibilidade
-                shadowColor="rgba(0,0,0,0.1)"
-                shadowBlur={2}
-                shadowOffsetX={1}
-                shadowOffsetY={1}
-              />
+            {/* Elementos de texto com área delimitada FIXA */}
+            {elements.map((element) => (
+              <TextWithBounds key={element.id} element={element} />
             ))}
             
-            {/* Transformer para redimensionar/rotacionar elementos */}
-            {!previewMode && (
-              <Transformer
-                ref={transformerRef}
-                boundBoxFunc={(oldBox, newBox) => {
-                  // Limita o tamanho mínimo
-                  if (newBox.width < 20 || newBox.height < 10) {
-                    return oldBox;
-                  }
-                  return newBox;
-                }}
-                // Configurações de aparência
-                borderStroke="#3b82f6"
-                borderStrokeWidth={2}
-                borderDash={[5, 5]}
-                anchorStroke="#3b82f6"
-                anchorStrokeWidth={2}
-                anchorFill="white"
-                anchorSize={8}
-                anchorCornerRadius={2}
-                // Opções de transformação
-                enabledAnchors={[
-                  'top-left', 'top-right', 'bottom-left', 'bottom-right',
-                  'top-center', 'bottom-center', 'middle-left', 'middle-right'
-                ]}
-                rotateEnabled={true}
-                rotationSnaps={[0, 45, 90, 135, 180, 225, 270, 315]}
-                rotateAnchorOffset={30}
-              />
-            )}
+            {/* Transformer REMOVIDO - usamos apenas drag + resize handle */}
           </Layer>
         </Stage>
       </div>
@@ -373,16 +516,17 @@ export default function TemplateEditor({
         </div>
       )}
 
-      {/* Dicas de uso */}
+      {/* Dicas de uso atualizadas */}
       {!previewMode && elements.length > 0 && (
         <div className="absolute bottom-4 left-4 bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700 max-w-xs">
           <p className="font-medium mb-1">💡 Dicas:</p>
           <ul className="space-y-1">
             <li>• Arraste o canvas para mover</li>
             <li>• Use scroll para dar zoom</li>
-            <li>• Arraste elementos para mover</li>
-            <li>• Use as alças para redimensionar</li>
-            <li>• Clique para selecionar e editar</li>
+            <li>• Arraste áreas de texto para mover</li>
+            <li>• Use o quadrado azul para redimensionar a ÁREA</li>
+            <li>• Texto se alinha DENTRO da área fixa</li>
+            <li>• Configure alinhamento no painel lateral</li>
           </ul>
         </div>
       )}
