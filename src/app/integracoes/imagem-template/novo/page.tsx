@@ -4,13 +4,13 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Konva from 'konva';
-import { 
-  Plus, 
-  Upload, 
-  Save, 
-  Type, 
-  Trash2, 
-  Edit3, 
+import {
+  Plus,
+  Upload,
+  Save,
+  Type,
+  Trash2,
+  Edit3,
   Palette,
   Settings,
   Eye,
@@ -55,7 +55,7 @@ export default function NovoTemplateDeImagemPage() {
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [, setIsEditing] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Estado para o elemento selecionado
@@ -66,6 +66,7 @@ export default function NovoTemplateDeImagemPage() {
       const img = new window.Image();
       img.src = backgroundImageUrl;
       img.onload = () => {
+        console.log('Imagem pronta para uso:', img);
         setBackgroundImage(img);
       };
     }
@@ -86,7 +87,11 @@ export default function NovoTemplateDeImagemPage() {
 
       if (!response.ok) throw new Error('Falha no upload da imagem');
 
+
       const data = await response.json();
+      console.log('Upload URL:', data.url);
+      console.log('URL completa:', window.location.origin + data.url);
+
       setBackgroundImageUrl(data.url);
     } catch (error) {
       console.error(error);
@@ -110,8 +115,8 @@ export default function NovoTemplateDeImagemPage() {
   };
 
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>, id: string) => {
-    setElements(currentElements => 
-      currentElements.map(el => 
+    setElements(currentElements =>
+      currentElements.map(el =>
         el.id === id ? { ...el, x: e.target.x(), y: e.target.y() } : el
       )
     );
@@ -189,11 +194,10 @@ export default function NovoTemplateDeImagemPage() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setPreviewMode(!previewMode)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                  previewMode 
-                    ? 'bg-blue-600 text-white' 
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${previewMode
+                    ? 'bg-blue-600 text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                  }`}
               >
                 <Eye className="w-4 h-4" />
                 {previewMode ? 'Sair do Preview' : 'Preview'}
@@ -285,11 +289,10 @@ export default function NovoTemplateDeImagemPage() {
                 {elements.map((element) => (
                   <div
                     key={element.id}
-                    className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                      selectedElementId === element.id
+                    className={`p-3 rounded-lg border cursor-pointer transition-all ${selectedElementId === element.id
                         ? 'border-blue-500 bg-blue-50'
                         : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
+                      }`}
                     onClick={() => handleElementClick(element.id)}
                   >
                     <div className="flex items-center justify-between">

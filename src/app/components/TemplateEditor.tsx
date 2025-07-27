@@ -4,7 +4,6 @@ import { Stage, Layer, Image as KonvaImage, Text as KonvaText, Transformer, Rect
 import Konva from 'konva';
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { ZoomIn, ZoomOut, RotateCcw, Maximize2 } from 'lucide-react';
-import dynamic from 'next/dynamic';
 
 // Definindo os tipos para as props e elementos
 interface TextElement {
@@ -45,6 +44,12 @@ function TemplateEditor({
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
+  const [isClient, setIsClient] = useState(false);
+
+  // Garantir que estamos no cliente
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Função handleFitToScreen usando useCallback
   const handleFitToScreen = useCallback(() => {
@@ -64,6 +69,8 @@ function TemplateEditor({
 
   // Atualiza o tamanho do container
   useEffect(() => {
+    if (!isClient) return;
+
     const updateContainerSize = () => {
       if (containerRef.current) {
         const { clientWidth, clientHeight } = containerRef.current;
@@ -71,62 +78,76 @@ function TemplateEditor({
       }
     };
 
-    updateContainerSize();
+    // Usar timeout para garantir que o DOM está pronto
+    const timer = setTimeout(updateContainerSize, 100);
+    
     window.addEventListener('resize', updateContainerSize);
-    return () => window.removeEventListener('resize', updateContainerSize);
-  }, []);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', updateContainerSize);
+    };
+  }, [isClient]);
 
   // Atualiza o tamanho do stage baseado na imagem de fundo
   useEffect(() => {
-    if (backgroundImage) {
+    if (backgroundImage && isClient) {
       setStageSize({
         width: backgroundImage.width,
         height: backgroundImage.height,
       });
-      // Auto-fit na primeira vez
-      handleFitToScreen();
+      // Auto-fit na primeira vez com delay
+      setTimeout(() => {
+        handleFitToScreen();
+      }, 200);
     }
-  }, [backgroundImage, handleFitToScreen]);
+  }, [backgroundImage, handleFitToScreen, isClient]);
 
   // Atualiza o transformer quando um elemento é selecionado
   useEffect(() => {
-    if (selectedElementId && transformerRef.current && !previewMode) {
-      const stage = stageRef.current;
-      if (stage) {
-        const selectedNode = stage.findOne(`#${selectedElementId}`) as Konva.Text;
-        if (selectedNode) {
-          transformerRef.current.nodes([selectedNode]);
-          transformerRef.current.getLayer()?.batchDraw();
-        }
+    if (!isClient || !selectedElementId || previewMode || !transformerRef.current) return;
+
+    const stage = stageRef.current;
+    if (stage) {
+      const selectedNode = stage.findOne(`#${selectedElementId}`) as Konva.Text;
+      if (selectedNode) {
+        transformerRef.current.nodes([selectedNode]);
+        transformerRef.current.getLayer()?.batchDraw();
       }
-    } else if (transformerRef.current) {
+    }
+  }, [selectedElementId, previewMode, isClient]);
+
+  // Limpar transformer quando necessário
+  useEffect(() => {
+    if (!isClient || !transformerRef.current) return;
+
+    if (!selectedElementId || previewMode) {
       transformerRef.current.nodes([]);
       transformerRef.current.getLayer()?.batchDraw();
     }
-  }, [selectedElementId, previewMode]);
+  }, [selectedElementId, previewMode, isClient]);
 
-  const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
+  const handleStageClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
     // Se clicou no stage (fundo), deseleciona elementos
     if (e.target === e.target.getStage()) {
       onElementClick('');
     }
-  };
+  }, [onElementClick]);
 
-  const handleTextClick = (e: Konva.KonvaEventObject<MouseEvent>, id: string) => {
+  const handleTextClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>, id: string) => {
     e.cancelBubble = true;
     if (!previewMode) {
       onElementClick(id);
     }
-  };
+  }, [onElementClick, previewMode]);
 
-  const handleTextTap = (e: Konva.KonvaEventObject<Event>, id: string) => {
+  const handleTextTap = useCallback((e: Konva.KonvaEventObject<Event>, id: string) => {
     e.cancelBubble = true;
     if (!previewMode) {
       onElementClick(id);
     }
-  };
+  }, [onElementClick, previewMode]);
 
-  const handleTransform = (e: Konva.KonvaEventObject<Event>) => {
+  const handleTransform = useCallback((e: Konva.KonvaEventObject<Event>) => {
     const node = e.target as Konva.Text;
     const scaleX = node.scaleX();
     const scaleY = node.scaleY();
@@ -147,26 +168,26 @@ function TemplateEditor({
         y: node.y()
       });
     }
-  };
+  }, [onElementUpdate]);
 
   // Funções de zoom
-  const handleZoomIn = () => {
+  const handleZoomIn = useCallback(() => {
     const newScale = Math.min(scale * 1.2, 5);
     setScale(newScale);
-  };
+  }, [scale]);
 
-  const handleZoomOut = () => {
+  const handleZoomOut = useCallback(() => {
     const newScale = Math.max(scale / 1.2, 0.1);
     setScale(newScale);
-  };
+  }, [scale]);
 
-  const handleResetZoom = () => {
+  const handleResetZoom = useCallback(() => {
     setScale(1);
     setPosition({ x: 0, y: 0 });
-  };
+  }, []);
 
   // Função para lidar com o wheel (zoom com scroll)
-  const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
+  const handleWheel = useCallback((e: Konva.KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault();
     
     const stage = e.target.getStage();
@@ -191,7 +212,19 @@ function TemplateEditor({
       y: pointer.y - mousePointTo.y * newScale,
     };
     setPosition(newPos);
-  };
+  }, []);
+
+  // Loading state se não estiver no cliente
+  if (!isClient) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gray-50 rounded-xl">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando editor...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div ref={containerRef} className="relative w-full h-full">
@@ -392,26 +425,4 @@ function TemplateEditor({
   );
 }
 
-// Exporta o componente com dynamic import para evitar problemas de SSR
-export default dynamic(() => Promise.resolve(TemplateEditor), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-gray-50 rounded-xl">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-        <p className="text-gray-600">Carregando editor...</p>
-      </div>
-    </div>
-  )
-});
-
-// Verificação se estamos no browser antes de usar Konva
-if (typeof window !== 'undefined') {
-  // Força o Konva a usar apenas funcionalidades do browser
-  import('konva').then((Konva) => {
-    // Configurações específicas do Konva para produção
-    if (Konva.default) {
-      Konva.default.pixelRatio = 1;
-    }
-  });
-}
+export default TemplateEditor;
