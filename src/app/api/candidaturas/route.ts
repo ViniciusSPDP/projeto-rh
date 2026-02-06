@@ -2,13 +2,15 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
-import { writeFile, stat, mkdir } from 'fs/promises';
 import prisma from '@/lib/prisma';
+import { minioClient, bucketName } from '@/lib/minio'; // Cliente MinIO configurado
+import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
 
+    // Extração dos campos do formulário
     const nomeCandidato = formData.get('nome') as string;
     const cpfCandidato = formData.get('cpf') as string;
     const emailCandidato = formData.get('email') as string;
@@ -41,44 +43,69 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Validação adicional da extensão do arquivo
-    const fileExtension = path.extname(curriculoFile.name).toLowerCase();
+    const originalName = curriculoFile.name;
+    const fileExtension = path.extname(originalName).toLowerCase();
     if (fileExtension !== '.pdf') {
         return NextResponse.json({ error: 'Apenas arquivos com extensão .pdf são permitidos.' }, { status: 400 });
     }
     // --- FIM DA VALIDAÇÃO ---
 
-    // 4. Criar nome único para o arquivo
-    const timestamp = Date.now();
-    const sanitizedCpf = cpfCandidato.replace(/\D/g, ''); // Remove caracteres especiais do CPF
-    const filename = `curriculo-${sanitizedCpf}-${timestamp}.pdf`;
-    
-    // 5. Definir diretório de upload
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'curriculos');
+    // 4. Preparar o arquivo para Upload (Buffer)
+    const arrayBuffer = await curriculoFile.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
-    // 6. Criar diretório se não existir
-    try {
-      await stat(uploadDir);
-    } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
-        await mkdir(uploadDir, { recursive: true });
-        console.log(`[UPLOAD] Diretório criado: ${uploadDir}`);
-      } else {
-        console.error('[UPLOAD] Erro ao verificar diretório:', error);
-        throw error;
-      }
+    // 5. Gerar nome único para o arquivo no Object Storage
+    // Usamos Hash para evitar colisão e caracteres especiais
+    const sanitizedCpf = cpfCandidato.replace(/\D/g, ''); 
+    const randomHash = crypto.randomBytes(8).toString('hex');
+    const filename = `curriculos/${sanitizedCpf}-${randomHash}.pdf`;
+    
+    // 6. Verificar se bucket existe (e criar se necessário)
+    // Isso garante que o upload não falhe no primeiro uso
+    const bucketExists = await minioClient.bucketExists(bucketName);
+    
+    if (!bucketExists) {
+      await minioClient.makeBucket(bucketName, 'us-east-1');
+      
+      // Define política pública (opcional - depende se quer os arquivos acessíveis via URL direta)
+      const policy = {
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Principal: { AWS: ['*'] },
+            Action: ['s3:GetObject'],
+            Resource: [`arn:aws:s3:::${bucketName}/*`],
+          },
+        ],
+      };
+      await minioClient.setBucketPolicy(bucketName, JSON.stringify(policy));
+      console.log(`[MINIO] Bucket '${bucketName}' criado com sucesso.`);
     }
 
-    // 7. Salvar arquivo
-    const buffer = Buffer.from(await curriculoFile.arrayBuffer());
-    const filePath = path.join(uploadDir, filename);
+    // 7. Enviar arquivo para o MinIO
+    const metaData = {
+      'Content-Type': 'application/pdf',
+      'X-Original-Name': originalName
+    };
+
+    await minioClient.putObject(
+      bucketName,
+      filename,
+      buffer,
+      buffer.length,
+      metaData
+    );
+    console.log(`[UPLOAD MINIO] Arquivo salvo: ${filename}`);
+
+    // 8. Construir a URL Pública do MinIO
+    const protocol = process.env.MINIO_USE_SSL === 'true' ? 'https' : 'http';
+    const host = process.env.MINIO_ENDPOINT || 'localhost';
     
-    await writeFile(filePath, buffer);
-    console.log(`[UPLOAD] Arquivo salvo em: ${filePath}`);
+    // URL Final: http://localhost:9000/nome-do-bucket/curriculos/cpf-hash.pdf
+    const curriculoUrl = `${protocol}://${host}/${bucketName}/${filename}`;
 
-    // 8. URL relativa para salvar no banco (será acessível via /uploads/curriculos/filename.pdf)
-    const curriculoUrl = `/uploads/curriculos/${filename}`;
-
-    // 9. Criar o registro do candidato no banco de dados
+    // 9. Criar o registro do candidato no banco de dados com a nova URL
     const novoCandidato = await prisma.candidatos.create({
       data: {
         nomeCandidato,
@@ -92,20 +119,22 @@ export async function POST(req: NextRequest) {
         bairroCandidato,
         cidadeCandidato,
         estadoCandidato,
-        curriculoUrl,
+        curriculoUrl, // Salva a URL do MinIO
         situacaoCandidato: 'Em análise',
       }
     });
 
-    console.log(`[UPLOAD] Candidato criado com ID: ${novoCandidato.idCandidato}`);
+    console.log(`[DB] Candidato criado com ID: ${novoCandidato.idCandidato}`);
     
     return NextResponse.json({
       ...novoCandidato,
+      // Serializa BigInt para string para evitar erro no JSON
+      idCandidato: novoCandidato.idCandidato.toString(),
       message: 'Candidatura criada com sucesso!'
     }, { status: 201 });
 
   } catch (error) {
-    console.error('[UPLOAD] Erro ao criar candidatura:', error);
+    console.error('[ERRO API] Falha ao processar candidatura:', error);
     return NextResponse.json({ 
       error: 'Falha ao criar candidatura. Tente novamente.' 
     }, { status: 500 });

@@ -25,7 +25,7 @@ export default function CurriculoViewer({ url }: CurriculoViewerProps) {
     );
   }
 
-  // Verificar se é PDF
+  // Verificar se é PDF (verificação simples por extensão)
   const isPdf = url.toLowerCase().includes('.pdf');
   
   if (!isPdf) {
@@ -48,8 +48,15 @@ export default function CurriculoViewer({ url }: CurriculoViewerProps) {
     );
   }
 
-  // Caso 2: É um PDF - tentar exibir
-  const pdfUrl = url.startsWith('/') ? url : `/${url}`;
+  // --- CORREÇÃO AQUI ---
+  // Lógica inteligente para definir a URL:
+  // 1. Se começar com 'http' (http ou https), é uma URL externa (MinIO/S3) -> Mantém como está.
+  // 2. Se começar com '/', é um caminho absoluto local -> Mantém como está.
+  // 3. Se não tiver nenhum dos dois, assume que é um arquivo local relativo -> Adiciona '/' no início.
+  let pdfUrl = url;
+  if (!url.startsWith('http') && !url.startsWith('/')) {
+      pdfUrl = `/${url}`;
+  }
 
   if (loadError) {
     return (

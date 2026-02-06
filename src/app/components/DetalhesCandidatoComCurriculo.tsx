@@ -5,6 +5,7 @@ import { useState, useTransition, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import BotaoImprimir from '@/app/components/BotaoImprimir'
+// Importa o tipo gerado pelo Prisma ou define manualmente se necessário
 import { Candidatos } from '@prisma/client'
 import {
     User, FileText, MapPin, Phone,
@@ -19,6 +20,7 @@ import ModalAdicionarObservacao from './ModalAdicionarObservacao'
 import ObservacaoItem from './ObservacaoItem'
 import CurriculoViewer from './CurriculoViewer'
 
+// Tipagem estendida para incluir campos calculados ou relacionamentos
 interface DetalhesCandidatoProps {
     candidato: Candidatos & {
         observacaoUpdatedAt?: Date | string | null;
@@ -33,6 +35,31 @@ type ObservacaoHistorico = {
     updatedAt: string;
     updatedBy: string | null;
     isDeleted: boolean;
+};
+
+// --- FUNÇÃO BLINDADA PARA CORRIGIR URL DO MINIO ---
+const normalizarUrlPdf = (url: string | null): string | null => {
+    if (!url) return null;
+    
+    let urlLimpa = url.trim();
+
+    // 1. Se a URL começar com apenas uma barra "https:/", o navegador acha que é local.
+    // Forçamos a substituição por "https://"
+    if (urlLimpa.includes('https:/') && !urlLimpa.includes('https://')) {
+        urlLimpa = urlLimpa.replace('https:/', 'https://');
+    }
+    
+    // 2. Remove a porta :443 se estiver presente (padrão HTTPS, não precisa exibir)
+    // Isso ajuda se o certificado SSL for wildcard e não gostar da porta na string
+    urlLimpa = urlLimpa.replace(':443', '');
+
+    // 3. Segurança extra: Se por acaso a URL vier com um / no início (ex: /https://...)
+    // removemos o primeiro caractere
+    if (urlLimpa.startsWith('/https')) {
+        urlLimpa = urlLimpa.substring(1);
+    }
+
+    return urlLimpa;
 };
 
 const InfoCard = ({ title, icon: Icon, children, className = "" }: {
@@ -92,9 +119,13 @@ export default function DetalhesCandidatoComCurriculo({ candidato }: DetalhesCan
     const [historicoObservacoes, setHistoricoObservacoes] = useState<ObservacaoHistorico[]>([])
     const [loadingHistorico, setLoadingHistorico] = useState(true)
 
+    // APLICA A CORREÇÃO NA URL AQUI
+    const urlCurriculoFinal = normalizarUrlPdf(candidato.curriculoUrl);
+
     const carregarHistorico = useCallback(async () => {
         try {
             setLoadingHistorico(true)
+            // Usa idCandidato convertido para string ou number conforme necessário
             const response = await fetch(`/api/candidatos/${candidato.idCandidato}/observacao/historico`)
             if (response.ok) {
                 const data = await response.json()
@@ -186,8 +217,8 @@ export default function DetalhesCandidatoComCurriculo({ candidato }: DetalhesCan
                                                 <Image
                                                     src={candidato.fotoCandidato}
                                                     alt={candidato.nomeCandidato || 'Foto do candidato'}
-                                                    layout="fill"
-                                                    objectFit="cover"
+                                                    fill
+                                                    style={{ objectFit: 'cover' }}
                                                 />
                                             ) : (
                                                 <User className="w-10 h-10 text-white" />
@@ -358,7 +389,8 @@ export default function DetalhesCandidatoComCurriculo({ candidato }: DetalhesCan
                             {/* Visualizador de Currículo */}
                             <InfoCard title="Currículo" icon={Eye} className="min-h-[1200px]">
                                 <div className="h-full w-full min-h-[1150px]">
-                                    <CurriculoViewer url={candidato.curriculoUrl} />
+                                    {/* Passamos a URL corrigida */}
+                                    <CurriculoViewer url={urlCurriculoFinal} />
                                 </div>
                             </InfoCard>
 

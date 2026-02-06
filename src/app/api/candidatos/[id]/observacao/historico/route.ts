@@ -1,16 +1,24 @@
-// app/api/candidatos/[id]/observacao/historico/route.ts
+// src/app/api/candidatos/[id]/observacao/historico/route.ts
 
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 
+// Interface para os parâmetros da rota no Next.js 15
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
+
 // POST - Adicionar nova observação ao histórico
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
+    // CORREÇÃO NEXT.JS 15: Aguardar params
+    const resolvedParams = await params
+    const candidatoId = BigInt(resolvedParams.id)
+    
     const { observacao, createdBy } = await request.json()
-    const candidatoId = BigInt(params.id)
 
     const novaObservacao = await prisma.observacaoHistorico.create({
       data: {
@@ -20,7 +28,14 @@ export async function POST(
       }
     })
 
-    return NextResponse.json(novaObservacao)
+    // Serialização: Converter BigInt para String para não quebrar o JSON
+    const observacaoFormatada = {
+      ...novaObservacao,
+      candidatoId: novaObservacao.candidatoId.toString(),
+      id: novaObservacao.id.toString() // Converte ID da observação se for BigInt/Int
+    }
+
+    return NextResponse.json(observacaoFormatada)
   } catch (error) {
     console.error('Erro ao adicionar observação:', error)
     return NextResponse.json(
@@ -33,10 +48,12 @@ export async function POST(
 // GET - Buscar histórico de observações
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
-    const candidatoId = BigInt(params.id)
+    // CORREÇÃO NEXT.JS 15: Aguardar params
+    const resolvedParams = await params
+    const candidatoId = BigInt(resolvedParams.id)
 
     const historico = await prisma.observacaoHistorico.findMany({
       where: { 

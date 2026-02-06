@@ -54,7 +54,7 @@ const nextConfig: NextConfig = {
   // CORRIGIDO: serverComponentsExternalPackages movido para serverExternalPackages
   serverExternalPackages: ['prisma'],
 
-  // Configuração de imagens otimizada para VPS
+  // Configuração de imagens otimizada para VPS e MinIO
   images: {
     domains: ['localhost', '192.168.1.42'],
     remotePatterns: [
@@ -70,7 +70,14 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'seu-dominio.com', // Substitua pelo seu domínio
+        hostname: 'conexaorh.s4r41va.com', // Substitua pelo seu domínio de produção
+      },
+      // --- CONFIGURAÇÃO DO MINIO (ADICIONADA) ---
+      {
+        protocol: 'https',         // Use 'https' se estiver configurado com SSL
+        hostname: 'dados-minio.v1dvzt.easypanel.host',    // Ou o IP/Domínio onde o MinIO está rodando
+        port: '9000',             // Porta padrão do MinIO
+        pathname: '/projeto-rh/**', // Nome do bucket definido no .env
       },
     ],
     unoptimized: true, // Para VPS simples

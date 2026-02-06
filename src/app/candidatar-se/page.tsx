@@ -1,4 +1,4 @@
-//src/app/candidatar-se/page.tsx (COM ANALYTICS - SEM DEBUG)
+// src/app/candidatar-se/page.tsx
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
@@ -53,7 +53,7 @@ export default function CandidatarSePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
 
-  // 🎯 ANALYTICS: Implementar tracking por step (sem debug visível)
+  // 🎯 ANALYTICS: Implementar tracking por step
   const analytics = useStepAnalytics('upload_curriculo', currentStep);
   const [camposPreenchidos, setCamposPreenchidos] = useState<Set<string>>(new Set());
   const [tempoInicioStep, setTempoInicioStep] = useState<number>(Date.now());
@@ -61,10 +61,11 @@ export default function CandidatarSePage() {
   // 📊 ANALYTICS: Track mudanças de step
   const handleStepChange = useCallback((novoStep: number) => {
     const tempoNaEtapa = Date.now() - tempoInicioStep;
+    // Definição explícita das etapas para garantir a tipagem correta
+    const etapas = ['step_1', 'step_2', 'step_3'] as const;
 
     if (novoStep > currentStep) {
       // Avançando - registrar preenchimento da etapa atual
-      const etapas = ['step_1', 'step_2', 'step_3'] as const;
       analytics.trackPreenchimento(etapas[currentStep - 1], {
         etapaCompletada: currentStep,
         proximaEtapa: novoStep,
@@ -73,14 +74,10 @@ export default function CandidatarSePage() {
         direcao: 'avancar'
       });
     } else if (novoStep < currentStep) {
-      // Defina o array de etapas para garantir a tipagem correta
-      const etapas = ['step_1', 'step_2', 'step_3'] as const;
-
       // Voltando - registrar navegação reversa
       analytics.track({
         evento: 'preenchimento',
-        // Use o índice para pegar o valor do tipo correto
-        etapa: etapas[currentStep - 1], // 👈 CORREÇÃO APLICADA
+        etapa: etapas[currentStep - 1],
         dadosExtra: {
           direcao: 'voltar',
           etapaOrigem: currentStep,
