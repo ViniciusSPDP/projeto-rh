@@ -221,17 +221,24 @@ export async function GET(
 
     // 5. COMPOSIÇÃO DA IMAGEM FINAL COM SHARP
     const finalImageBuffer = await sharp(backgroundImageBuffer)
-      .composite([{ input: Buffer.from(svgOverlay), top: 0, left: 0 }])
+      .composite([
+        { 
+          input: Buffer.from(svgOverlay), 
+          top: 0, 
+          left: 0 
+        }
+      ])
       .png()
       .toBuffer();
 
     // 6. RETORNO DA IMAGEM GERADA
-    return new NextResponse(finalImageBuffer, {
+    // Convertemos o Buffer para uma resposta compatível
+    return new NextResponse(finalImageBuffer as unknown as BodyInit, {
       status: 200,
       headers: {
         'Content-Type': 'image/png',
         'Content-Disposition': `inline; filename="vaga-${vagaId}.png"`,
-        'Cache-Control': 'public, max-age=3600', // Cache por 1 hora
+        'Cache-Control': 'public, max-age=3600',
       },
     });
 

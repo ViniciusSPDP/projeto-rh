@@ -1,6 +1,8 @@
-// Arquivo: src/app/api/upload/route.ts (ou substitua o image/route.ts)
+// Arquivo: src/app/api/upload/route.ts
 import { NextResponse } from 'next/server';
-import { minioClient, bucketName } from '@/lib/minio';
+// Atualizamos as importações para usar o que foi exportado no novo lib/minio.ts
+import { s3Client, bucketName, ensureBucketExists, minioBaseUrl } from '@/lib/minio';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
 
 export async function POST(req: Request) {
@@ -20,51 +22,28 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(arrayBuffer);
 
     // 2. Gerar nome único para o arquivo
-    const fileExtension = file.name.split('.').pop();
+    // Usamos ?. para evitar erro se não tiver extensão
+    const fileExtension = file.name.split('.').pop() || 'bin'; 
     const randomName = crypto.randomBytes(16).toString('hex');
     const fileName = `${randomName}.${fileExtension}`;
 
-    // 3. Verificar se bucket existe (segurança)
-    const bucketExists = await minioClient.bucketExists(bucketName);
-    if (!bucketExists) {
-      await minioClient.makeBucket(bucketName, 'us-east-1');
-      // Define política como pública para leitura (opcional, depende da sua segurança)
-      // Se for privado, você precisará gerar Presigned URLs para visualização
-      const policy = {
-        Version: '2012-10-17',
-        Statement: [
-          {
-            Effect: 'Allow',
-            Principal: { AWS: ['*'] },
-            Action: ['s3:GetObject'],
-            Resource: [`arn:aws:s3:::${bucketName}/*`],
-          },
-        ],
-      };
-      await minioClient.setBucketPolicy(bucketName, JSON.stringify(policy));
-    }
+    // 3. Verificar se bucket existe (Usando o helper atualizado)
+    await ensureBucketExists();
 
-    // 4. Enviar para o MinIO
-    // O metaData é opcional, mas útil
-    const metaData = {
-      'Content-Type': file.type,
-    };
+    // 4. Enviar para o MinIO (Usando o AWS SDK S3)
+    const command = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: fileName,
+      Body: buffer,
+      ContentType: file.type,
+      // ACL: 'public-read' // Opcional, já que definimos a policy no ensureBucketExists
+    });
 
-    await minioClient.putObject(
-      bucketName,
-      fileName,
-      buffer,
-      buffer.length,
-      metaData
-    );
+    await s3Client.send(command);
 
     // 5. Construir a URL Pública
-    const protocol = process.env.MINIO_USE_SSL === 'true' ? 'https' : 'http';
-    const port = process.env.MINIO_PORT ? `:${process.env.MINIO_PORT}` : '';
-    const host = process.env.MINIO_ENDPOINT;
-    
-    // URL Final que será salva no Banco de Dados
-    const publicUrl = `${protocol}://${host}${port}/${bucketName}/${fileName}`;
+    // Usamos a variável centralizada minioBaseUrl para evitar erros de concatenação
+    const publicUrl = `${minioBaseUrl}/${bucketName}/${fileName}`;
 
     console.log('Arquivo salvo no MinIO:', publicUrl);
 

@@ -2,7 +2,7 @@
 
 import { Stage, Layer, Image as KonvaImage, Text as KonvaText, Rect, Group } from 'react-konva';
 import Konva from 'konva';
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react'; // Adicionado useCallback
 import { ZoomIn, ZoomOut, RotateCcw, Maximize2 } from 'lucide-react';
 
 // Import dos tipos
@@ -77,6 +77,22 @@ export default function TemplateEditor({
         return 0;
     }
   };
+
+  // --- CORREÇÃO 1: useCallback para handleFitToScreen para resolver o warning do useEffect ---
+  const handleFitToScreen = useCallback(() => {
+    if (!backgroundImage || !containerSize.width || !containerSize.height) return;
+
+    const scaleX = (containerSize.width - 100) / stageSize.width;
+    const scaleY = (containerSize.height - 100) / stageSize.height;
+    const newScale = Math.min(scaleX, scaleY, 1);
+    
+    setScale(newScale);
+    
+    // Centraliza
+    const x = (containerSize.width - stageSize.width * newScale) / 2;
+    const y = (containerSize.height - stageSize.height * newScale) / 2;
+    setPosition({ x: Math.max(0, x), y: Math.max(0, y) });
+  }, [backgroundImage, containerSize, stageSize]);
 
   // Componente para renderizar texto com área delimitada FIXA
   const TextWithBounds = ({ element }: { element: TextElement }) => {
@@ -293,7 +309,7 @@ export default function TemplateEditor({
     return () => window.removeEventListener('resize', updateContainerSize);
   }, []);
 
-  // Atualiza o tamanho do stage baseado na imagem de fundo
+  // Atualiza o tamanho do stage baseado na imagem de fundo e faz auto-fit
   useEffect(() => {
     if (backgroundImage) {
       setStageSize({
@@ -303,7 +319,8 @@ export default function TemplateEditor({
       // Auto-fit na primeira vez
       handleFitToScreen();
     }
-  }, [backgroundImage, containerSize]);
+    // Adicionamos handleFitToScreen na dependência (agora que é useCallback)
+  }, [backgroundImage, containerSize, handleFitToScreen]); 
 
   // Atualiza o transformer quando um elemento é selecionado (DESABILITADO)
   useEffect(() => {
@@ -314,7 +331,8 @@ export default function TemplateEditor({
     }
   }, [selectedElementId, previewMode]);
 
-  const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
+  // --- CORREÇÃO 2: Tipagem correta para suportar MouseEvent OU TouchEvent ---
+  const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
     // Se clicou no stage (fundo), deseleciona elementos E permite arrastar canvas
     if (e.target === e.target.getStage()) {
       console.log('Clicou no fundo - deselecionando e habilitando drag do canvas');
@@ -341,21 +359,6 @@ export default function TemplateEditor({
   const handleResetZoom = () => {
     setScale(1);
     setPosition({ x: 0, y: 0 });
-  };
-
-  const handleFitToScreen = () => {
-    if (!backgroundImage || !containerSize.width || !containerSize.height) return;
-
-    const scaleX = (containerSize.width - 100) / stageSize.width;
-    const scaleY = (containerSize.height - 100) / stageSize.height;
-    const newScale = Math.min(scaleX, scaleY, 1);
-    
-    setScale(newScale);
-    
-    // Centraliza
-    const x = (containerSize.width - stageSize.width * newScale) / 2;
-    const y = (containerSize.height - stageSize.height * newScale) / 2;
-    setPosition({ x: Math.max(0, x), y: Math.max(0, y) });
   };
 
   // Função para lidar com o wheel (zoom com scroll)
