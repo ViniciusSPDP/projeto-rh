@@ -22,6 +22,7 @@ export const minioClient = new Minio.Client({
   useSSL: useSSL,
   accessKey: process.env.MINIO_ACCESS_KEY || '',
   secretKey: process.env.MINIO_SECRET_KEY || '',
+  region: process.env.MINIO_REGION || 'us-east-1',
 });
 
 export const bucketName = process.env.MINIO_BUCKET_NAME || 'projeto-rh-files';
