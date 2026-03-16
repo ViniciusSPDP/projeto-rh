@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
       Body: buffer,
       ContentType: 'application/pdf',
       Metadata: {
-        'original-name': originalName 
+        'original-name': encodeURIComponent(originalName) 
       }
     });
 
