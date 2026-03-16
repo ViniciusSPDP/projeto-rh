@@ -43,3 +43,44 @@ export async function PATCH(
     )
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const idStr = await Promise.resolve(params.id)
+  const id = Number(idStr)
+  
+  if (isNaN(id)) {
+    return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+  }
+
+  try {
+    // Para deletar o candidato de forma segura, precisamos usar uma Transaction
+    // para excluir todas as dependências relacionadas primeiro, já que 
+    // VagaCandidato não possui onDelete: Cascade por padrão no banco do usuário.
+    await prisma.$transaction([
+      // 1. Apaga os vínculos com as vagas
+      prisma.vagaCandidato.deleteMany({
+        where: { candidatoId: id },
+      }),
+      // 2. Apaga o histórico de observações (se existir)
+      prisma.observacaoHistorico.deleteMany({
+        where: { candidatoId: id },
+      }),
+      // 3. Finalmente apaga o candidato
+      prisma.candidatos.delete({
+        where: { idCandidato: id },
+      }),
+    ])
+
+    return NextResponse.json({ success: true, message: 'Candidato excluído com sucesso' }, { status: 200 })
+
+  } catch (error) {
+    console.error('Erro ao excluir candidato:', error)
+    return NextResponse.json(
+      { error: 'Erro interno ao excluir candidato.' },
+      { status: 500 }
+    )
+  }
+}

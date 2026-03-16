@@ -5,31 +5,33 @@ import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { Trash2, LoaderCircle, AlertTriangle } from 'lucide-react'
 
-interface BotaoExcluirVagaProps {
-  vagaId: number
+interface Props {
+  candidatoId: string | number
+  nomeCandidato: string
 }
 
-export function BotaoExcluirVaga({ vagaId }: BotaoExcluirVagaProps) {
+export default function BotaoExcluirCandidatoLista({ candidatoId, nomeCandidato }: Props) {
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
   const router = useRouter()
 
-  const excluir = async () => {
+  const handleExcluir = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/vagas/${vagaId}`, { method: 'DELETE' })
+      const res = await fetch(`/api/candidatos/${candidatoId}`, {
+        method: 'DELETE',
+      })
       if (res.ok) {
-        toast.success('Vaga excluída com sucesso!')
+        toast.success('Candidato excluído com sucesso')
         setOpen(false)
-        router.push('/vagas')
         router.refresh()
       } else {
         const data = await res.json().catch(() => null)
-        toast.error(data?.error || 'Não foi possível excluir a vaga.')
+        toast.error(data?.error || 'Erro ao excluir candidato')
       }
-    } catch (_error) {
-      console.error(_error)
-      toast.error('Ocorreu um erro de comunicação com o servidor.')
+    } catch (error) {
+      console.error(error)
+      toast.error('Erro de comunicação com o servidor')
     } finally {
       setLoading(false)
     }
@@ -40,7 +42,7 @@ export function BotaoExcluirVaga({ vagaId }: BotaoExcluirVagaProps) {
       <button
         onClick={() => setOpen(true)}
         className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors"
-        title="Excluir vaga"
+        title="Excluir candidato"
       >
         <Trash2 className="w-4 h-4" /> <span className="hidden sm:inline">Excluir</span>
       </button>
@@ -58,17 +60,17 @@ export function BotaoExcluirVaga({ vagaId }: BotaoExcluirVagaProps) {
                 <AlertTriangle className="h-8 w-8 text-red-600" aria-hidden="true" />
               </div>
               <h3 className="text-xl font-bold text-gray-900">
-                Excluir Vaga
+                Excluir Candidato
               </h3>
             </div>
             
             {/* Corpo principal */}
             <div className="px-6 py-5 text-center">
               <p className="text-gray-600 text-base">
-                Tem certeza que deseja excluir esta vaga do sistema? 
+                Tem certeza que deseja excluir o(a) candidato(a) <span className="font-bold text-gray-800">{nomeCandidato}</span> do sistema? 
               </p>
               <p className="mt-3 text-sm font-medium text-red-600 bg-red-50 py-2 px-3 rounded-lg border border-red-100">
-                Esta ação apagará também os vínculos com os candidatos dessa vaga e não poderá ser desfeita.
+                Esta ação apagará também o histórico e vínculos com vagas e não poderá ser desfeita.
               </p>
             </div>
 
@@ -85,7 +87,7 @@ export function BotaoExcluirVaga({ vagaId }: BotaoExcluirVagaProps) {
               <button
                 type="button"
                 className="inline-flex w-full sm:w-auto justify-center rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-700 active:bg-red-800 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors disabled:opacity-50"
-                onClick={excluir}
+                onClick={handleExcluir}
                 disabled={loading}
               >
                 {loading ? (
@@ -94,7 +96,7 @@ export function BotaoExcluirVaga({ vagaId }: BotaoExcluirVagaProps) {
                     Excluindo...
                   </>
                 ) : (
-                  'Sim, Excluir Vaga'
+                  'Sim, Excluir Candidato'
                 )}
               </button>
             </div>

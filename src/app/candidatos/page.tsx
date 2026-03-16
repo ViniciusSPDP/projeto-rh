@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { ChevronLeft, ChevronRight, User, Search, Filter, CircleCheck, CircleX, Loader, Cog, MapPin, X } from 'lucide-react'
 import MultiSelectCity from '@/app/components/MultiSelectCity'
 import SearchInput from '@/app/components/SearchInput'
+import BotaoExcluirCandidatoLista from '@/app/components/BotaoExcluirCandidatoLista'
 
 export const dynamic = 'force-dynamic'
 
@@ -269,6 +270,7 @@ export default async function CandidatosPage({ searchParams }: CandidatosPagePro
     { value: "Conferência", label: "Conferência" },
     { value: "RH", label: "RH" },
     { value: "TI", label: "TI" },
+    { value: "Make", label: "Make" },
   ]
 
   const situacaoOptions = [
@@ -499,12 +501,19 @@ export default async function CandidatosPage({ searchParams }: CandidatosPagePro
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <Link 
-                          href={`/candidatos/${candidato.idCandidato}`} 
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors group-hover:bg-blue-100"
-                        >
-                          <Search className="w-4 h-4" /> <span>Detalhes</span>
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          <Link 
+                            href={`/candidatos/${candidato.idCandidato}`} 
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors group-hover:bg-blue-100"
+                          >
+                            <Search className="w-4 h-4" /> <span className="hidden sm:inline">Detalhes</span>
+                          </Link>
+                          
+                          <BotaoExcluirCandidatoLista 
+                            candidatoId={candidato.idCandidato.toString()} 
+                            nomeCandidato={candidato.nomeCandidato || 'Sem Nome'} 
+                          />
+                        </div>
                       </td>
                     </tr>
                   ))

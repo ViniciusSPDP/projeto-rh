@@ -20,7 +20,6 @@ export async function POST(req: NextRequest) {
 
     // Extração dos campos do formulário
     const nomeCandidato = formData.get('nome') as string;
-    const cpfCandidato = formData.get('cpf') as string;
     const emailCandidato = formData.get('email') as string;
     const telefoneCandidato = formData.get('telefone') as string;
     const vagainteresseCandidato = formData.get('cargo') as string;
@@ -62,10 +61,10 @@ export async function POST(req: NextRequest) {
     const arrayBuffer = await curriculoFile.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // 5. Gerar nome único para o arquivo
-    const sanitizedCpf = cpfCandidato.replace(/\D/g, ''); 
+    // 5. Gerar nome único para o arquivo usando o telefone como base
+    const sanitizedPhone = telefoneCandidato.replace(/\D/g, ''); 
     const randomHash = crypto.randomBytes(8).toString('hex');
-    const filename = `curriculos/${sanitizedCpf}-${randomHash}.pdf`;
+    const filename = `curriculos/${sanitizedPhone}-${randomHash}.pdf`;
     
     // 6. Verificar se bucket existe (usando o helper novo)
     await ensureBucketExists();
@@ -93,7 +92,6 @@ export async function POST(req: NextRequest) {
     const novoCandidato = await prisma.candidatos.create({
       data: {
         nomeCandidato,
-        cpfCandidato,
         emailCandidato,
         telefoneCandidato,
         vagainteresseCandidato,

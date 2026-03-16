@@ -41,11 +41,11 @@ export default function CandidatarSePage() {
   const cargosDisponiveis = [
     "Administrativo", "Reposição", "Expedição", "Recebimento", "Entrega",
     "Financeiro", "Compras", "Fiscal", "Vendas", "Marketing",
-    "Conferência", "RH", "TI"
+    "Conferência", "RH", "TI", "Make"
   ];
 
   const [formData, setFormData] = useState({
-    nome: '', cpf: '', email: '', telefone: '', cargo: '',
+    nome: '', email: '', telefone: '', cargo: '',
     cep: '', rua: '', numero: '', bairro: '', cidade: '', estado: '',
   });
   const [curriculo, setCurriculo] = useState<File | null>(null);
@@ -98,9 +98,7 @@ export default function CandidatarSePage() {
     let formattedValue = value;
 
     // Aplicar máscaras
-    if (name === 'cpf') {
-      formattedValue = masks.cpf(value);
-    } else if (name === 'telefone') {
+    if (name === 'telefone') {
       formattedValue = masks.phone(value);
     } else if (name === 'cep') {
       formattedValue = masks.cep(value);
@@ -331,7 +329,7 @@ export default function CandidatarSePage() {
 
       // Reset form
       setFormData({
-        nome: '', cpf: '', email: '', telefone: '', cargo: '',
+        nome: '', email: '', telefone: '', cargo: '',
         cep: '', rua: '', numero: '', bairro: '', cidade: '', estado: '',
       });
       setCurriculo(null);
@@ -411,7 +409,7 @@ export default function CandidatarSePage() {
   const isStepValid = (step: number): boolean => {
     switch (step) {
       case 1:
-        return !!(formData.nome && formData.cpf && formData.email && formData.telefone);
+        return !!(formData.nome && formData.email && formData.telefone);
       case 2:
         return !!(formData.cep && formData.rua && formData.numero && formData.bairro && formData.cidade && formData.estado);
       case 3:
@@ -531,23 +529,6 @@ export default function CandidatarSePage() {
                         onChange={handleInputChange}
                         placeholder="Digite seu nome completo"
                         className="w-full pl-10 sm:pl-11 pr-4 py-3 border text-gray-600 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="group sm:col-span-2 md:col-span-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">CPF</label>
-                    <div className="relative">
-                      <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5 transition-colors group-focus-within:text-blue-500" />
-                      <input
-                        type="text"
-                        name="cpf"
-                        value={formData.cpf}
-                        onChange={handleInputChange}
-                        placeholder="000.000.000-00"
-                        maxLength={14}
-                        className="w-full pl-10 sm:pl-11 pr-4 text-gray-600 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-sm sm:text-base"
                         required
                       />
                     </div>

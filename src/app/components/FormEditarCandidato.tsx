@@ -638,6 +638,7 @@ export default function FormEditarCandidato({ candidato }: FormEditarCandidatoPr
                                         <option value="Conferência">Conferência</option>
                                         <option value="RH">RH</option>
                                         <option value="TI">TI</option>
+                                        <option value="Make">Make</option>
                                     </select>
                                 </div>
 
