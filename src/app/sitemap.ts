@@ -1,6 +1,8 @@
 import { MetadataRoute } from 'next';
 import prisma from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // IMPORTANTE: Altere esta URL para o domínio real do seu site!
   const baseUrl = 'https://s4r41va.com';

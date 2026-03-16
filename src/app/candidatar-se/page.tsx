@@ -4,7 +4,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Toaster, toast } from 'react-hot-toast';
-import { User, FileText, Mail, Phone, MapPin, Briefcase, Loader2, UploadCloud, CheckCircle, ArrowRight, AlertTriangle } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Briefcase, Loader2, UploadCloud, CheckCircle, ArrowRight, AlertTriangle } from 'lucide-react';
 import { useStepAnalytics } from '@/hooks/useAnalytics';
 
 // Funções de máscara personalizadas

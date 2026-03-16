@@ -2,7 +2,6 @@ import { PrismaClient } from '@prisma/client'
 
 // Declara um tipo para a nossa instância global do Prisma
 declare global {
-  // eslint-disable-next-line no-var
   var prisma: PrismaClient | undefined
 }
 
