@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { uploadBase64Image } from '@/lib/minio'
 
 // Corrigido a tipagem do 'context'
 export async function PATCH(
@@ -7,7 +8,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   const id = Number(params.id)
-  
+
   if (isNaN(id)) {
     return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
   }
@@ -15,9 +16,17 @@ export async function PATCH(
   try {
     const data = await request.json()
 
+    // Foto: se vier base64/data URL nova, sobe pro MinIO e guarda só a KEY.
+    // Se já for uma KEY (foto inalterada) ou URL, o helper mantém o valor.
+    const fotoCandidato =
+      data.fotoCandidato !== undefined
+        ? await uploadBase64Image(data.fotoCandidato, 'fotos/candidatos')
+        : undefined
+
     // Converte as datas de string para o formato Date, se existirem
     const parsedData = {
       ...data,
+      ...(fotoCandidato !== undefined ? { fotoCandidato } : {}),
       datanascimentoCandidato: data.datanascimentoCandidato ? new Date(data.datanascimentoCandidato) : null,
       datainicioCandidato: data.datainicioCandidato ? new Date(data.datainicioCandidato) : null,
       datafinalCandidato: data.datafinalCandidato ? new Date(data.datafinalCandidato) : null,

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { uploadBase64Image } from '@/lib/minio'
 
 export async function POST(req: Request) {
   const data = await req.json()
@@ -12,9 +13,13 @@ export async function POST(req: Request) {
     // Remover vagaId antes de criar o candidato
     const { vagaId, ...dadosCandidato } = data
 
+    // Foto: se vier base64/data URL, sobe pro MinIO e guarda só a KEY
+    const fotoCandidato = await uploadBase64Image(dadosCandidato.fotoCandidato, 'fotos/candidatos')
+
     const candidato = await prisma.candidatos.create({
       data: {
         ...dadosCandidato,
+        fotoCandidato,
         datanascimentoCandidato: parseDate(data.datanascimentoCandidato),
         datainicioCandidato: parseDate(data.datainicioCandidato),
         datafinalCandidato: parseDate(data.datafinalCandidato),

@@ -6,6 +6,7 @@ import { useState, useTransition, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import BotaoImprimir from '@/app/components/BotaoImprimir'
+import { resolveFotoSrc } from '@/lib/foto'
 import { Candidatos } from '@prisma/client'
 import {
     User, FileText, Briefcase, MapPin, Phone,
@@ -115,9 +116,9 @@ export default function DetalhesCandidato({ candidato }: DetalhesCandidatoProps)
                         <div className="bg-blue-700 text-white p-4 sm:p-6">
                             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                                 <div className="relative w-16 h-16 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center border-2 border-blue-500">
-                                    {candidato.fotoCandidato ? (
+                                    {resolveFotoSrc(candidato.fotoCandidato, `/api/candidatos/${candidato.idCandidato}/foto`) ? (
                                         <Image
-                                            src={candidato.fotoCandidato}
+                                            src={resolveFotoSrc(candidato.fotoCandidato, `/api/candidatos/${candidato.idCandidato}/foto`)!}
                                             alt={candidato.nomeCandidato || 'Foto do candidato'}
                                             layout="fill"
                                             objectFit="cover"

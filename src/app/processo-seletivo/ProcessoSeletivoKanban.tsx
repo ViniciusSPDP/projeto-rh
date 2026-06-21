@@ -6,6 +6,7 @@ import { useState, DragEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Briefcase, Mail, Phone, User, Loader2 } from 'lucide-react'
 import Image from 'next/image'
+import { resolveFotoSrc } from '@/lib/foto'
 
 
 type Etapa = 'Em Recrutamento' | 'Seleção' | 'Entrevista' | 'Feedback' | 'Contratado' | 'Reprovado';
@@ -197,11 +198,11 @@ const getHeaderColor = (etapa: Etapa) => {
                 >
                   <div className="mb-3 flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      {vc.candidato?.fotoCandidato ? (
+                      {resolveFotoSrc(vc.candidato?.fotoCandidato, `/api/candidatos/${vc.candidato?.idCandidato}/foto`) ? (
                         <div className="relative h-10 w-10 overflow-hidden rounded-full">
                           <Image
-                            src={vc.candidato.fotoCandidato}
-                            alt={vc.candidato.nomeCandidato || ''}
+                            src={resolveFotoSrc(vc.candidato?.fotoCandidato, `/api/candidatos/${vc.candidato?.idCandidato}/foto`)!}
+                            alt={vc.candidato?.nomeCandidato || ''}
                             layout="fill"
                             objectFit="cover"
                           />

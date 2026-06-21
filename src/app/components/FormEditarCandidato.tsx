@@ -1083,11 +1083,11 @@ export default function FormEditarCandidato({ candidato }: FormEditarCandidatoPr
                                         Foto (URL)
                                     </label>
                                     <input
-                                        type="url"
+                                        type="text"
                                         name="fotoCandidato"
                                         value={String(formData.fotoCandidato || '')}
                                         onChange={handleChange}
-                                        placeholder="https://exemplo.com/foto.jpg"
+                                        placeholder="Foto enviada no cadastro (gerenciada automaticamente)"
                                         className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     />
                                 </div>

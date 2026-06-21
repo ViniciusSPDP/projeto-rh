@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 // 1. Removidas as importações 'ImageIcon' e 'X' que não estavam sendo usadas
 import { User, Save, LoaderCircle, KeyRound } from 'lucide-react';
 import Image from 'next/image';
+import { resolveFotoSrc } from '@/lib/foto';
 
 // Função para comprimir a imagem
 function compressImage(file: File, maxWidth: number, quality: number): Promise<string> {
@@ -51,7 +52,8 @@ function ProfileForm() {
                     setFormData({ nome: data.nome, email: data.email });
                     if (data.fotourl) {
                         setFotourl(data.fotourl);
-                        setPhotoPreview(`data:image/png;base64,${data.fotourl}`);
+                        // KEY no MinIO -> /api/user/avatar; base64 legado -> data URL
+                        setPhotoPreview(resolveFotoSrc(data.fotourl, '/api/user/avatar'));
                     }
                 }
             })

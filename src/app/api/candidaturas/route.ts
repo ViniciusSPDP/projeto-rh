@@ -3,8 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import prisma from '@/lib/prisma';
-// Importamos minioBaseUrl além dos outros exports
-import { s3Client, bucketName, ensureBucketExists, minioBaseUrl } from '@/lib/minio'; 
+import { s3Client, bucketName, ensureBucketExists } from '@/lib/minio';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
 
@@ -84,9 +83,10 @@ export async function POST(req: NextRequest) {
     
     console.log(`[UPLOAD MINIO] Arquivo salvo: ${filename}`);
 
-    // 8. Construir a URL Pública
-    // Usamos a constante exportada do minio.ts para evitar erros de tipagem e complexidade
-    const curriculoUrl = `${minioBaseUrl}/${bucketName}/${filename}`;
+    // 8. Salvar apenas a KEY do objeto (não a URL).
+    // O bucket é PRIVADO: o currículo é exibido via proxy autenticado
+    // (/api/candidatos/[id]/curriculo), que gera o acesso na hora a partir da key.
+    const curriculoUrl = filename;
 
     // 9. Criar o registro do candidato no banco de dados
     const novoCandidato = await prisma.candidatos.create({

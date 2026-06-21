@@ -4,6 +4,10 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/authOptions'
 import prisma from '@/lib/prisma'
+import { getObjectBytes, contentTypeFromKey } from '@/lib/minio'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -19,20 +23,33 @@ export async function GET() {
       select: { fotourl: true },
     })
 
-    if (user?.fotourl) {
-      // Se encontrou a foto, decodifica o base64 e retorna como imagem
-      const imageBuffer = Buffer.from(user.fotourl, 'base64')
-      
+    const fotourl = user?.fotourl?.trim()
+
+    if (fotourl && fotourl.startsWith('fotos/')) {
+      // KEY no MinIO privado: baixa e serve
+      const bytes = await getObjectBytes(fotourl)
+      if (bytes) {
+        return new NextResponse(Buffer.from(bytes), {
+          headers: {
+            'Content-Type': contentTypeFromKey(fotourl),
+            'Content-Length': String(bytes.byteLength),
+            'Cache-Control': 'private, max-age=3600',
+          },
+        })
+      }
+    } else if (fotourl) {
+      // Legado: base64 cru no banco -> decodifica e serve
+      const imageBuffer = Buffer.from(fotourl, 'base64')
       return new NextResponse(imageBuffer, {
         headers: {
-          'Content-Type': 'image/png', // ou o tipo de imagem que você salva
+          'Content-Type': 'image/jpeg',
           'Cache-Control': 'no-cache, no-store, must-revalidate',
         },
       })
-    } else {
-      // Se não tem foto, redireciona para a imagem padrão
-      return NextResponse.redirect(new URL('/user-placeholder.png', process.env.NEXT_PUBLIC_BASE_URL))
     }
+
+    // Sem foto (ou objeto ausente): imagem padrão
+    return NextResponse.redirect(new URL('/user-placeholder.png', process.env.NEXT_PUBLIC_BASE_URL))
   } catch (error) {
     console.error("Erro ao buscar avatar:", error)
     // Em caso de erro, também redireciona para a imagem padrão
