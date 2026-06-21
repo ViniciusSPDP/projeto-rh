@@ -3,6 +3,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { uploadBase64Image } from "@/lib/minio";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from 'bcryptjs';
 
@@ -47,8 +48,9 @@ export async function PATCH(req: NextRequest) {
     // Atualização de dados básicos
     if (nome) updateData.nome = nome;
     if (email) updateData.email = email;
-    // Permite remover a foto passando `null`
-    if (fotourl !== undefined) updateData.fotourl = fotourl;
+    // Foto: se vier base64/data URL, sobe pro MinIO e guarda só a KEY.
+    // Permite remover a foto passando `null` (helper retorna null).
+    if (fotourl !== undefined) updateData.fotourl = await uploadBase64Image(fotourl, 'fotos/usuarios');
 
     // Lógica para alteração de senha
     if (senha_atual && nova_senha) {

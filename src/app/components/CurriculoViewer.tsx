@@ -25,38 +25,10 @@ export default function CurriculoViewer({ url }: CurriculoViewerProps) {
     );
   }
 
-  // Verificar se é PDF (verificação simples por extensão)
-  const isPdf = url.toLowerCase().includes('.pdf');
-  
-  if (!isPdf) {
-    return (
-      <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center h-full flex flex-col justify-center items-center bg-gray-50">
-        <AlertCircle className="mx-auto h-16 w-16 text-amber-500 mb-4" />
-        <p className="text-gray-600 font-medium text-lg mb-2">Formato não suportado</p>
-        <p className="text-gray-500 text-sm mb-4">Apenas arquivos PDF podem ser visualizados.</p>
-        <a
-          href={url}
-          download
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Download className="w-4 h-4" />
-          Baixar Arquivo
-        </a>
-      </div>
-    );
-  }
-
-  // --- CORREÇÃO AQUI ---
-  // Lógica inteligente para definir a URL:
-  // 1. Se começar com 'http' (http ou https), é uma URL externa (MinIO/S3) -> Mantém como está.
-  // 2. Se começar com '/', é um caminho absoluto local -> Mantém como está.
-  // 3. Se não tiver nenhum dos dois, assume que é um arquivo local relativo -> Adiciona '/' no início.
-  let pdfUrl = url;
-  if (!url.startsWith('http') && !url.startsWith('/')) {
-      pdfUrl = `/${url}`;
-  }
+  // A URL já chega pronta do componente pai (proxy autenticado do MinIO, ou legado em disco).
+  // Como o currículo é sempre PDF (validado no upload e servido como application/pdf),
+  // não há mais detecção de formato nem normalização de URL aqui.
+  const pdfUrl = url;
 
   if (loadError) {
     return (
@@ -67,7 +39,7 @@ export default function CurriculoViewer({ url }: CurriculoViewerProps) {
         <div className="flex gap-3">
           <a
             href={pdfUrl}
-            download
+            download="curriculo.pdf"
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Download className="w-4 h-4" />
@@ -125,7 +97,7 @@ export default function CurriculoViewer({ url }: CurriculoViewerProps) {
         {/* Botões de ação */}
         <a
           href={pdfUrl}
-          download
+          download="curriculo.pdf"
           className="p-2 hover:bg-gray-100 text-gray-700 rounded transition-colors"
           title="Baixar PDF"
         >

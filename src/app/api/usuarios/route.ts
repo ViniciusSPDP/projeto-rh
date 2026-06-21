@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { uploadBase64Image } from '@/lib/minio'
 import bcrypt from 'bcryptjs'
 
 export async function POST(req: NextRequest) {
@@ -32,14 +33,17 @@ export async function POST(req: NextRequest) {
     // 3. Criptografa a senha antes de salvar
     const senhahash = await bcrypt.hash(senha, 10)
 
-    // 4. Cria o novo usuário no banco de dados
+    // 4. Foto: se vier base64/data URL, sobe pro MinIO e guarda só a KEY
+    const fotoKey = await uploadBase64Image(fotourl, 'fotos/usuarios')
+
+    // 5. Cria o novo usuário no banco de dados
     const novoUsuario = await prisma.usuario.create({
       data: {
         nome,
         email,
         senhahash,
         autorizado: autorizado || false, // Garante que o padrão seja false
-        fotourl: fotourl || null,
+        fotourl: fotoKey,
       },
     })
 

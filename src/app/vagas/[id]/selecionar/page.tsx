@@ -79,7 +79,7 @@ const VAGA_INTERESSE_OPTIONS = [
     { value: "Compras", label: "Compras" }, { value: "Fiscal", label: "Fiscal" },
     { value: "Vendas", label: "Vendas" }, { value: "Marketing", label: "Marketing" },
     { value: "Conferência", label: "Conferência" }, { value: "RH", label: "RH" },
-    { value: "TI", label: "TI" },
+    { value: "TI", label: "TI" }, { value: "Make", label: "Make" },
 ];
 
 const SITUACAO_CANDIDATO_OPTIONS = [

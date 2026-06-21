@@ -72,13 +72,9 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'conexaorh.s4r41va.com', // Substitua pelo seu domínio de produção
       },
-      // --- CONFIGURAÇÃO DO MINIO (ADICIONADA) ---
-      {
-        protocol: 'https',         // Use 'https' se estiver configurado com SSL
-        hostname: 'dados-minio.v1dvzt.easypanel.host',    // Ou o IP/Domínio onde o MinIO está rodando
-        port: '9000',             // Porta padrão do MinIO
-        pathname: '/projeto-rh/**', // Nome do bucket definido no .env
-      },
+      // O bucket MinIO é PRIVADO: os arquivos não são mais carregados por URL pública
+      // direta (eram servidos via <Image>/iframe). O currículo agora passa pelo proxy
+      // autenticado /api/candidatos/[id]/curriculo. Por isso não há remotePattern do MinIO.
     ],
     unoptimized: true, // Para VPS simples
   },

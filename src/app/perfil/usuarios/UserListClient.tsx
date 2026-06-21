@@ -5,6 +5,7 @@ import type { UserForList } from './page';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
 import { KeyRound, X, LoaderCircle, Save } from 'lucide-react';
+import { resolveFotoSrc } from '@/lib/foto';
 
 // --- Sub-componente: Switch para autorizar/desautorizar ---
 function ToggleAuth({ isAuthorized, onChange, disabled }: { isAuthorized: boolean, onChange: () => void, disabled: boolean }) {
@@ -119,7 +120,7 @@ export default function UserListClient({ initialUsers }: { initialUsers: UserFor
                     <li key={user.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-4">
                         <div className="flex items-center gap-4">
                             <Image
-                                src={user.fotourl ? `data:image/png;base64,${user.fotourl}` : '/user-placeholder.png'}
+                                src={resolveFotoSrc(user.fotourl, `/api/usuarios/${user.id}/foto`) ?? '/user-placeholder.png'}
                                 alt={`Foto de ${user.nome}`}
                                 width={40}
                                 height={40}

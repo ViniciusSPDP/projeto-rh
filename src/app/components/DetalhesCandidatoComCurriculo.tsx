@@ -19,6 +19,7 @@ import ModalObservacao from './ModalObservacao'
 import ModalAdicionarObservacao from './ModalAdicionarObservacao'
 import ObservacaoItem from './ObservacaoItem'
 import CurriculoViewer from './CurriculoViewer'
+import { resolveFotoSrc } from '@/lib/foto'
 
 // Tipagem estendida para incluir campos calculados ou relacionamentos
 interface DetalhesCandidatoProps {
@@ -37,29 +38,22 @@ type ObservacaoHistorico = {
     isDeleted: boolean;
 };
 
-// --- FUNÇÃO BLINDADA PARA CORRIGIR URL DO MINIO ---
-const normalizarUrlPdf = (url: string | null): string | null => {
-    if (!url) return null;
-    
-    let urlLimpa = url.trim();
+// Resolve a URL para exibir o currículo.
+// - Currículo no MinIO (key ou URL pública legada) -> proxy autenticado por id.
+// - Currículo legado servido do disco local (/uploads/... ou /api/curriculos/...) -> URL direta.
+const resolverUrlCurriculo = (
+    curriculoUrl: string | null | undefined,
+    idCandidato: string | number | bigint,
+): string | null => {
+    const cu = curriculoUrl?.trim();
+    if (!cu) return null;
 
-    // 1. Se a URL começar com apenas uma barra "https:/", o navegador acha que é local.
-    // Forçamos a substituição por "https://"
-    if (urlLimpa.includes('https:/') && !urlLimpa.includes('https://')) {
-        urlLimpa = urlLimpa.replace('https:/', 'https://');
-    }
-    
-    // 2. Remove a porta :443 se estiver presente (padrão HTTPS, não precisa exibir)
-    // Isso ajuda se o certificado SSL for wildcard e não gostar da porta na string
-    urlLimpa = urlLimpa.replace(':443', '');
+    const isLegadoLocal =
+        cu.startsWith('/uploads/') ||
+        cu.startsWith('/api/curriculos') ||
+        cu.includes('uploads/curriculos');
 
-    // 3. Segurança extra: Se por acaso a URL vier com um / no início (ex: /https://...)
-    // removemos o primeiro caractere
-    if (urlLimpa.startsWith('/https')) {
-        urlLimpa = urlLimpa.substring(1);
-    }
-
-    return urlLimpa;
+    return isLegadoLocal ? cu : `/api/candidatos/${idCandidato}/curriculo`;
 };
 
 const InfoCard = ({ title, icon: Icon, children, className = "" }: {
@@ -119,8 +113,8 @@ export default function DetalhesCandidatoComCurriculo({ candidato }: DetalhesCan
     const [historicoObservacoes, setHistoricoObservacoes] = useState<ObservacaoHistorico[]>([])
     const [loadingHistorico, setLoadingHistorico] = useState(true)
 
-    // APLICA A CORREÇÃO NA URL AQUI
-    const urlCurriculoFinal = normalizarUrlPdf(candidato.curriculoUrl);
+    // Resolve a URL do currículo (proxy autenticado para o MinIO, ou legado em disco)
+    const urlCurriculoFinal = resolverUrlCurriculo(candidato.curriculoUrl, candidato.idCandidato);
 
     const carregarHistorico = useCallback(async () => {
         try {
@@ -213,9 +207,9 @@ export default function DetalhesCandidatoComCurriculo({ candidato }: DetalhesCan
                                 <div className="flex flex-col lg:flex-row lg:items-center gap-6">
                                     <div className="flex items-center gap-6">
                                         <div className="relative w-20 h-20 rounded-full overflow-hidden bg-white/20 flex items-center justify-center border-4 border-white/30 shadow-lg">
-                                            {candidato.fotoCandidato ? (
+                                            {resolveFotoSrc(candidato.fotoCandidato, `/api/candidatos/${candidato.idCandidato}/foto`) ? (
                                                 <Image
-                                                    src={candidato.fotoCandidato}
+                                                    src={resolveFotoSrc(candidato.fotoCandidato, `/api/candidatos/${candidato.idCandidato}/foto`)!}
                                                     alt={candidato.nomeCandidato || 'Foto do candidato'}
                                                     fill
                                                     style={{ objectFit: 'cover' }}
