@@ -85,6 +85,7 @@ function ExperienciaFields({ index, formData, handleChange }: ExperienciaFieldsP
 export default function FormCandidatoPublico({ vagaId }: { vagaId?: number }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [consentimento, setConsentimento] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>('pessoal');
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [visibleExperiences, setVisibleExperiences] = useState(0);
@@ -489,7 +490,12 @@ export default function FormCandidatoPublico({ vagaId }: { vagaId?: number }) {
     e.preventDefault();
     
     if (!validateForm()) return;
-    
+
+    if (!consentimento) {
+      toast.error('É necessário aceitar a Política de Privacidade para enviar a candidatura.');
+      return;
+    }
+
     setLoading(true);
     
     analytics.track({
@@ -505,6 +511,7 @@ export default function FormCandidatoPublico({ vagaId }: { vagaId?: number }) {
     try {
       const bodyParaApi = {
         ...formData,
+        consentimento,
         conhecimentosinformaticaCandidato: formData.conhecimentosinformaticaCandidato.join(', '),
         vagaId,
         situacaoCandidato: vagaId ? 'Em processo' : 'Em análise',
@@ -710,6 +717,24 @@ export default function FormCandidatoPublico({ vagaId }: { vagaId?: number }) {
               <p className="text-sm text-gray-600"><span className="font-medium">Email:</span> {formData.emailCandidato || 'Não preenchido'}</p>
             </div>
           </section>
+        )}
+
+        {activeTab === 'outros' && (
+          <div className="mt-2 rounded-xl border border-blue-200 bg-blue-50 p-4">
+            <label className="flex items-start gap-3 text-sm text-gray-700 leading-relaxed cursor-pointer">
+              <input
+                type="checkbox"
+                checked={consentimento}
+                onChange={(e) => setConsentimento(e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 flex-shrink-0"
+              />
+              <span>
+                Li e concordo com a{' '}
+                <a href="/politica-de-privacidade" target="_blank" rel="noopener noreferrer" className="text-blue-700 underline font-medium">Política de Privacidade</a>{' '}
+                e autorizo o uso dos meus dados (incluindo dados sensíveis como PCD/CID, que eu opte por informar) para fins de recrutamento e seleção.
+              </span>
+            </label>
+          </div>
         )}
 
         <div className="flex items-center justify-between border-t border-gray-900/10 pt-6">

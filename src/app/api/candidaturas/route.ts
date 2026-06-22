@@ -29,6 +29,14 @@ export async function POST(req: NextRequest) {
     const cidadeCandidato = formData.get('cidade') as string;
     const estadoCandidato = formData.get('estado') as string;
 
+    // --- CONSENTIMENTO LGPD (obrigatório, validado no backend) ---
+    if (formData.get('consentimento') !== 'true') {
+      return NextResponse.json(
+        { error: 'É necessário aceitar a Política de Privacidade para enviar a candidatura.' },
+        { status: 400 }
+      );
+    }
+
     // --- VALIDAÇÃO DE SEGURANÇA DO ARQUIVO ---
     const curriculoFile = formData.get('curriculo') as File | null;
 

@@ -10,8 +10,16 @@ export async function POST(req: Request) {
   }
 
   try {
-    // Remover vagaId antes de criar o candidato
-    const { vagaId, ...dadosCandidato } = data
+    // Remover vagaId e consentimento antes de criar o candidato (não são campos do modelo)
+    const { vagaId, consentimento, ...dadosCandidato } = data
+
+    // Consentimento LGPD obrigatório (validado no backend)
+    if (consentimento !== true) {
+      return NextResponse.json(
+        { error: 'É necessário aceitar a Política de Privacidade para enviar a candidatura.' },
+        { status: 400 }
+      )
+    }
 
     // Foto: se vier base64/data URL, sobe pro MinIO e guarda só a KEY
     const fotoCandidato = await uploadBase64Image(dadosCandidato.fotoCandidato, 'fotos/candidatos')

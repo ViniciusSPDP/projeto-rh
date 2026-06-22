@@ -296,6 +296,7 @@ export default function CandidatarSePage() {
       submissionData.append(key, value);
     });
     submissionData.append('curriculo', curriculo);
+    submissionData.append('consentimento', declaracao ? 'true' : 'false');
 
     try {
       const response = await fetch('/api/candidaturas', {
@@ -788,7 +789,7 @@ export default function CandidatarSePage() {
                         onChange={(e) => setDeclaracao(e.target.checked)}
                       />
                       <label htmlFor="declaracao" className="text-xs sm:text-sm text-gray-700 leading-relaxed">
-                        <span className="font-medium">DECLARO</span> que todas as informações fornecidas são verdadeiras e estou ciente de que declarações falsas implicarão na eliminação do processo seletivo. Autorizo o uso dos meus dados para fins de recrutamento e seleção.
+                        <span className="font-medium">DECLARO</span> que todas as informações fornecidas são verdadeiras e estou ciente de que declarações falsas implicarão na eliminação do processo seletivo. Li e concordo com a <a href="/politica-de-privacidade" target="_blank" rel="noopener noreferrer" className="text-blue-700 underline font-medium">Política de Privacidade</a> e autorizo o uso dos meus dados (incluindo dados sensíveis que eu opte por informar) para fins de recrutamento e seleção.
                       </label>
                     </div>
                   </div>

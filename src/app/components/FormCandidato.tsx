@@ -183,6 +183,8 @@ export default function FormCandidato({ vagaId }: { vagaId?: number }) {
         try {
             const bodyParaApi = {
                 ...formData,
+                // Cadastro manual pelo admin (autenticado): consentimento obtido presencialmente
+                consentimento: true,
                 conhecimentosinformaticaCandidato: formData.conhecimentosinformaticaCandidato.join(', '),
                 vagaId,
                 situacaoCandidato: vagaId ? 'Em processo' : 'Em análise',
