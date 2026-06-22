@@ -1,6 +1,7 @@
 // src/app/api/vagas/[id]/vincular/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireSession } from '@/lib/auth-guard';
 import prisma from '@/lib/prisma';
 import { getEtapasConfig } from '@/lib/etapasConfig';
 import { enviarMensagemSimples } from '@/lib/whatsapp-service';
@@ -87,6 +88,8 @@ interface Context { params: { id: string; } }
 interface RequestBody { candidatos: number[]; }
 
 export async function POST(req: NextRequest, context: Context) {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   try {
     const vagaId = Number(context.params.id);
     const { candidatos }: RequestBody = await req.json();

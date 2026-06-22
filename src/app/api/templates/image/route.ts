@@ -1,9 +1,12 @@
 // src/app/api/templates/image/route.ts
 
 import { NextResponse } from 'next/server';
+import { requireSession } from '@/lib/auth-guard';
 import prisma from '@/lib/prisma';
 
 export async function POST(req: Request) {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   try {
     // 1. Pega os dados enviados do frontend
     const body = await req.json();
@@ -33,6 +36,8 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   try {
     const templates = await prisma.imageTemplate.findMany({
       orderBy: {

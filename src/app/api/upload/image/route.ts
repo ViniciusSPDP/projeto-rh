@@ -2,6 +2,7 @@
 // VERSÃO CORRIGIDA E COM TIPOS SEGUROS
 
 import { NextResponse } from 'next/server';
+import { requireSession } from '@/lib/auth-guard';
 // 1. Importamos o tipo 'UploadApiResponse' junto com o 'cloudinary'
 import { v2 as cloudinary, type UploadApiResponse } from 'cloudinary';
 
@@ -37,6 +38,8 @@ async function uploadToCloudinary(buffer: Buffer): Promise<UploadApiResponse> {
 
 // A função principal da nossa API
 export async function POST(req: Request) {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     try {
         const formData = await req.formData();
         const file = formData.get('file') as File | null;

@@ -1,6 +1,7 @@
 // ARQUIVO: A sua rota que atualiza a etapa do candidato (ex: /api/vagas/[id]/candidatos/[vagaCandidatoId]/route.ts)
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireSession } from '@/lib/auth-guard';
 import prisma from '@/lib/prisma';
 import { getEtapasConfig } from '@/lib/etapasConfig';
 import { enviarMensagemSimples } from '@/lib/whatsapp-service';
@@ -28,6 +29,8 @@ export async function PATCH(
   req: NextRequest,
   context: Context
 ) {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   const { vagaCandidatoId } = context.params;
   const { etapa: novaEtapa } = await req.json();
 

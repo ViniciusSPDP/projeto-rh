@@ -1,11 +1,14 @@
 // src/app/api/candidatos/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireSession } from '@/lib/auth-guard';
 import prisma from '@/lib/prisma';
 import { Prisma } from '@prisma/client'; // 1. Importando o namespace Prisma
 
 // Rota para criar um candidato manualmente (via admin)
 export async function POST(req: NextRequest) {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   try {
     const body = await req.json();
 

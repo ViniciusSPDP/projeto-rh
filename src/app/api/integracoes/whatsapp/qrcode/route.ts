@@ -1,9 +1,12 @@
 // app/api/integracoes/whatsapp/qrcode/route.ts
 
 import { NextResponse } from 'next/server'
+import { requireSession } from '@/lib/auth-guard';
 import { evolutionFetch, EVOLUTION_API, QRCodeResponse } from '@/lib/evolution-api'
 
 export async function POST() {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   try {
     // Primeiro, tentar conectar a instância existente
     const connectResponse = await evolutionFetch(

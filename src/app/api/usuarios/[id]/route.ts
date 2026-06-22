@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireSession } from '@/lib/auth-guard';
 import prisma from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
@@ -13,6 +14,8 @@ export async function PATCH(
   req: NextRequest,
   context: Context // 👈 CORREÇÃO 1: Tipagem do context
 ) {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   const { params } = context
   const userId = Number(params.id);
   const body = await req.json();

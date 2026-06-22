@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireSession } from '@/lib/auth-guard';
 import prisma from '@/lib/prisma'
 import { uploadBase64Image } from '@/lib/minio'
 
@@ -7,6 +8,8 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   const id = Number(params.id)
 
   if (isNaN(id)) {
@@ -57,6 +60,8 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   const idStr = await Promise.resolve(params.id)
   const id = Number(idStr)
   

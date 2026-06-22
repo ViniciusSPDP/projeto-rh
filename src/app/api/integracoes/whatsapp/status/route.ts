@@ -1,6 +1,7 @@
 // app/api/integracoes/whatsapp/status/route.ts
 
 import { NextResponse } from 'next/server';
+import { requireSession } from '@/lib/auth-guard';
 import { EVOLUTION_API, evolutionHeaders } from '@/lib/evolution-api';
 
 /**
@@ -15,6 +16,8 @@ interface EvolutionInstance {
 }
 
 export async function GET() {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   try {
     console.log('Verificando status da instância:', EVOLUTION_API.instanceName);
     

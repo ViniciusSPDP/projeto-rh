@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { requireSession } from '@/lib/auth-guard';
 import prisma from '@/lib/prisma'
 
 // Definindo uma interface para o contexto da rota
@@ -9,6 +10,8 @@ interface Context {
 }
 
 export async function PATCH(req: Request, context: Context) {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   const { status } = await req.json()
   const { params } = context
 

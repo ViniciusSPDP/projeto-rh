@@ -1,6 +1,7 @@
 // src/app/api/vagas/[id]/generate-image/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireSession } from '@/lib/auth-guard';
 import sharp from 'sharp';
 import prisma from '@/lib/prisma';
 
@@ -169,6 +170,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } } 
 ) {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   try {
     // 1. EXTRAÇÃO E VALIDAÇÃO DOS PARÂMETROS
     const vagaIdString = params.id;

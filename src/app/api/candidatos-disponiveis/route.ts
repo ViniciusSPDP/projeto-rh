@@ -1,10 +1,13 @@
 // src/app/api/candidatos-disponiveis/route.ts
 
 import { NextRequest, NextResponse } from 'next/server'
+import { requireSession } from '@/lib/auth-guard';
 import prisma from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 
 export async function GET(req: NextRequest) {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   const { searchParams } = req.nextUrl
   const vagaId = Number(searchParams.get('vagaId'))
   const page = Number(searchParams.get('page') || '1')

@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
+import { requireSession } from '@/lib/auth-guard';
 import prisma from '@/lib/prisma'
 
 export async function POST(req: Request) {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   const data = await req.json()
 
   if (!data.titulo) {

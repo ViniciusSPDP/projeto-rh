@@ -1,6 +1,7 @@
 // src/app/api/curriculos/[filename]/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireSession } from '@/lib/auth-guard';
 import path from 'path';
 import { readFile, stat } from 'fs/promises';
 
@@ -36,6 +37,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { filename: string } }
 ) {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   try {
     const { filename } = params;
     

@@ -1,6 +1,7 @@
 // src/app/api/vagas/[id]/fechar/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireSession } from '@/lib/auth-guard';
 import prisma from '@/lib/prisma';
 import { enviarMensagensEmLote } from '@/lib/whatsapp-service';
 import { getWhatsAppConfig } from '@/lib/whatsappConfig'; // NOVO: 1. Importar a função de configuração
@@ -48,6 +49,8 @@ const formatDate = (date: Date | null | undefined): string => {
 };
 
 export async function PATCH(req: NextRequest, context: Context) {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   const vagaId = Number(context.params.id);
 
   if (isNaN(vagaId)) {

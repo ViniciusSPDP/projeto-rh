@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireSession } from '@/lib/auth-guard';
 import prisma from '@/lib/prisma'
 
 interface Context {
@@ -6,6 +7,8 @@ interface Context {
 }
 
 export async function PATCH(req: NextRequest, context: Context) {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   const vagaId = Number(context.params.id)
   if (isNaN(vagaId)) {
     return NextResponse.json({ error: 'ID da vaga inválido' }, { status: 400 })
@@ -31,6 +34,8 @@ export async function PATCH(req: NextRequest, context: Context) {
 }
 
 export async function DELETE(req: NextRequest, context: Context) {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   const vagaId = Number(context.params.id)
   if (isNaN(vagaId)) {
     return NextResponse.json({ error: 'ID da vaga inválido' }, { status: 400 })

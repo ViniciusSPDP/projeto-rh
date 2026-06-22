@@ -1,11 +1,14 @@
 // src/app/api/usuarios/route.ts
 
 import { NextRequest, NextResponse } from 'next/server'
+import { requireSession } from '@/lib/auth-guard';
 import prisma from '@/lib/prisma'
 import { uploadBase64Image } from '@/lib/minio'
 import bcrypt from 'bcryptjs'
 
 export async function POST(req: NextRequest) {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   try {
     const body = await req.json()
     const { nome, email, senha, autorizado, fotourl } = body

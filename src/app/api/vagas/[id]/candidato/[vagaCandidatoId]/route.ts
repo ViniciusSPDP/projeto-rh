@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { requireSession } from '@/lib/auth-guard';
 import prisma from '@/lib/prisma'
 
 interface Context {
@@ -9,6 +10,8 @@ interface Context {
 }
 
 export async function DELETE(_req: Request, context: Context) {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   const vagaId = Number(context.params.id)
   const vagaCandidatoId = Number(context.params.vagaCandidatoId)
 

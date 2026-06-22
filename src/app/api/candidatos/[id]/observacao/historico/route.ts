@@ -1,6 +1,7 @@
 // src/app/api/candidatos/[id]/observacao/historico/route.ts
 
 import { NextRequest, NextResponse } from 'next/server'
+import { requireSession } from '@/lib/auth-guard';
 import prisma from '@/lib/prisma'
 
 // Interface para os parâmetros da rota no Next.js 15
@@ -13,6 +14,8 @@ export async function POST(
   request: NextRequest,
   { params }: RouteParams
 ) {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   try {
     // CORREÇÃO NEXT.JS 15: Aguardar params
     const resolvedParams = await params
@@ -50,6 +53,8 @@ export async function GET(
   request: NextRequest,
   { params }: RouteParams
 ) {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   try {
     // CORREÇÃO NEXT.JS 15: Aguardar params
     const resolvedParams = await params

@@ -1,6 +1,7 @@
 // app/api/candidatos/observacao/[obsId]/route.ts
 
 import { NextRequest, NextResponse } from 'next/server'
+import { requireSession } from '@/lib/auth-guard';
 import prisma from '@/lib/prisma'
 
 // PATCH - Editar observação específica
@@ -8,6 +9,8 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: { obsId: string } }
 ) {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   try {
     const { observacao, updatedBy } = await request.json()
     const obsId = parseInt(params.obsId)
@@ -36,6 +39,8 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { obsId: string } }
 ) {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   try {
     const obsId = parseInt(params.obsId);
 
