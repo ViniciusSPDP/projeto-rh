@@ -2,8 +2,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import AnalyticsService from '@/lib/analytics';
+import { rateLimit, getClientIp, rateLimitResponse } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
+  // Rate limit por IP (endpoint público de tracking): 60/min (generoso p/ eventos de funil).
+  const rl = rateLimit('track:' + getClientIp(request), 60, 60_000);
+  if (!rl.allowed) return rateLimitResponse(rl);
   try {
     const body = await request.json();
     const { sessionId, tipoForm, evento, etapa, dadosExtra } = body;

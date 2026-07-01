@@ -2,8 +2,12 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { uploadBase64Image } from '@/lib/minio'
 import { candidatoCreateSchema } from '@/lib/validation/candidato'
+import { rateLimit, getClientIp, rateLimitResponse } from '@/lib/rate-limit'
 
 export async function POST(req: Request) {
+  // Rate limit por IP (criação pública de candidato): 5/min.
+  const rl = rateLimit('publico:' + getClientIp(req), 5, 60_000)
+  if (!rl.allowed) return rateLimitResponse(rl)
   try {
     const data = await req.json()
 
