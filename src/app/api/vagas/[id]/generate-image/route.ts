@@ -51,6 +51,32 @@ function escapeHtml(unsafe: string): string {
          .replace(/'/g, "&#039;");
 }
 
+// --- SANITIZAÇÃO DE ATRIBUTOS DO SVG ---
+// Os elementos vêm do JSON do template (controlado pelo usuário). Além de escapar o
+// TEXTO, precisamos validar os ATRIBUTOS (fill, font-family, geometria) para impedir
+// que se quebre para fora do atributo e injete markup/handlers no SVG.
+const ALLOWED_FONT_FAMILIES = [
+  'Arial, sans-serif', 'Arial', 'Helvetica', 'Georgia',
+  'Times New Roman', 'Verdana', 'Courier New',
+];
+function safeFontFamily(value?: string): string {
+  return value && ALLOWED_FONT_FAMILIES.includes(value) ? value : 'Arial, sans-serif';
+}
+// Aceita hex (#rgb..#rrggbbaa), rgb()/rgba() ou nome de cor simples; senão, preto.
+function safeColor(value: unknown): string {
+  const s = String(value ?? '');
+  const ok =
+    /^#[0-9a-fA-F]{3,8}$/.test(s) ||
+    /^rgba?\(\s*[\d.,\s%]+\)$/.test(s) ||
+    /^[a-zA-Z]{1,32}$/.test(s);
+  return ok ? s : '#000000';
+}
+// Número finito ou fallback (evita NaN e injeção via atributos numéricos).
+function num(value: unknown, fallback: number): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 // Função para calcular largura aproximada do texto (mais precisa)
 function getApproximateTextWidth(text: string, fontSize: number, fontFamily: string = 'Arial'): number {
   // Valores mais precisos baseados em testes reais
@@ -97,8 +123,8 @@ function calculateVerticalOffset(
   element: TextElement, 
   totalTextHeight: number
 ): number {
-  const height = element.height || 100;
-  const padding = element.padding || 10;
+  const height = num(element.height, 100);
+  const padding = num(element.padding, 10);
   const availableHeight = height - (padding * 2);
   
   switch (element.verticalAlign) {
@@ -115,21 +141,26 @@ function calculateVerticalOffset(
 // Função para processar elemento com área delimitada
 function processTextElement(element: TextElement, vaga: VagaData): string {
   const processedText = replacePlaceholders(element.text, vaga);
-  
-  // Valores padrão
-  const width = element.width || 300;
+
+  // Valores padrão (coeridos para número/valores seguros — o template é dado do usuário)
+  const width = num(element.width, 300);
   //const height = element.height || 100;
-  const padding = element.padding || 10;
-  const align = element.align || 'left';
-  
+  const padding = num(element.padding, 10);
+  const fontSize = num(element.fontSize, 16);
+  const elementX = num(element.x, 0);
+  const elementY = num(element.y, 0);
+  const align = element.align === 'center' || element.align === 'right' ? element.align : 'left';
+  const safeFont = safeFontFamily(element.fontFamily);
+  const fillColor = safeColor(element.fill);
+
   // Área disponível para texto
   const maxTextWidth = width - (padding * 2);
-  
+
   // Quebrar texto em linhas
-  const lines = wrapText(processedText, maxTextWidth, element.fontSize, element.fontFamily || 'Arial');
-  
+  const lines = wrapText(processedText, maxTextWidth, fontSize, safeFont);
+
   // Calcular altura e posicionamento
-  const lineHeight = element.fontSize * 1.2;
+  const lineHeight = fontSize * 1.2;
   const totalTextHeight = lines.length * lineHeight;
   const verticalOffset = calculateVerticalOffset(element, totalTextHeight);
   
@@ -147,19 +178,19 @@ function processTextElement(element: TextElement, vaga: VagaData): string {
   // Gerar SVG para cada linha
   const textElements = lines.map((line, index) => {
     const safeText = escapeHtml(line);
-    
+
     // Calcular posições
-    let textX = element.x + padding;
-    const textY = element.y + padding + verticalOffset + (index * lineHeight) + (lineHeight * 0.8);
-    
+    let textX = elementX + padding;
+    const textY = elementY + padding + verticalOffset + (index * lineHeight) + (lineHeight * 0.8);
+
     // Ajustar X baseado no alinhamento
     if (align === 'center') {
-      textX = element.x + (width / 2);
+      textX = elementX + (width / 2);
     } else if (align === 'right') {
-      textX = element.x + width - padding;
+      textX = elementX + width - padding;
     }
-    
-    return `<text x="${textX}" y="${textY}" font-size="${element.fontSize}" fill="${element.fill}" font-family="${element.fontFamily || 'Arial, sans-serif'}" font-weight="${fontWeight}" font-style="${fontStyle}" text-anchor="${align === 'center' ? 'middle' : align === 'right' ? 'end' : 'start'}">${safeText}</text>`;
+
+    return `<text x="${textX}" y="${textY}" font-size="${fontSize}" fill="${fillColor}" font-family="${safeFont}" font-weight="${fontWeight}" font-style="${fontStyle}" text-anchor="${align === 'center' ? 'middle' : align === 'right' ? 'end' : 'start'}">${safeText}</text>`;
   });
   
   return textElements.join('');
@@ -220,8 +251,6 @@ export async function GET(
 
     const svgOverlay = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">${svgElements}</svg>`;
 
-    console.log('SVG gerado:', svgOverlay); // Debug
-
     // 5. COMPOSIÇÃO DA IMAGEM FINAL COM SHARP
     const finalImageBuffer = await sharp(backgroundImageBuffer)
       .composite([
@@ -246,10 +275,8 @@ export async function GET(
     });
 
   } catch (error) {
+    // Detalhe do erro só no log do servidor; nunca vaza para o cliente.
     console.error('Erro ao gerar imagem:', error);
-    return NextResponse.json({ 
-      error: 'Falha interna ao gerar a imagem.',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 });
+    return NextResponse.json({ error: 'Falha interna ao gerar a imagem.' }, { status: 500 });
   }
 }

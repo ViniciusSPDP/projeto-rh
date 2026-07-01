@@ -122,11 +122,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(dadosExport, { status: 200 });
 
   } catch (error) {
+    // Detalhe do erro fica só no log do servidor; nunca vaza para o cliente.
     console.error('[ANALYTICS EXPORT] Erro:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-    return NextResponse.json({
-      error: 'Erro interno do servidor',
-      details: errorMessage
-    }, { status: 500 });
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
