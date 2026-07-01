@@ -1,7 +1,7 @@
 // src/app/api/configuracoes/etapas/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireSession } from '@/lib/auth-guard';
+import { requireAdmin } from '@/lib/auth-guard';
 import { promises as fs } from 'fs';
 import path from 'path';
 import type { EtapasConfig } from '@/types/configuracoes'; // Importando nosso novo tipo
@@ -26,8 +26,8 @@ async function ensureDataDir() {
  * Se o arquivo não existir, retorna uma configuração padrão vazia.
  */
 export async function GET() {
-  const session = await requireSession();
-  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  const session = await requireAdmin();
+  if (!session) return NextResponse.json({ error: 'Acesso restrito a administradores' }, { status: 403 });
   try {
     const data = await fs.readFile(CONFIG_FILE, 'utf-8');
     return NextResponse.json({ config: JSON.parse(data) });
@@ -50,8 +50,8 @@ export async function GET() {
  * POST - Salva a configuração de disparo por etapa.
  */
 export async function POST(req: NextRequest) {
-  const session = await requireSession();
-  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  const session = await requireAdmin();
+  if (!session) return NextResponse.json({ error: 'Acesso restrito a administradores' }, { status: 403 });
   try {
     const config: EtapasConfig = await req.json();
     

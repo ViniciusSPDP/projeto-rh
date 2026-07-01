@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "setup": "node scripts/setup-directories.js",
+    "set-admin": "node scripts/set-admin.js",
     "build:production": "npm run setup && npm run build",
     "deploy": "npm run build:production && npm start"
   },

@@ -3,6 +3,8 @@ import NextAuth, { DefaultSession, DefaultUser } from "next-auth"
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { JWT } from "next-auth/jwt"
 
+type Role = "ADMIN" | "USER";
+
 declare module "next-auth" {
   /**
    * O objeto `session.user` que o frontend recebe.
@@ -10,6 +12,7 @@ declare module "next-auth" {
   interface Session {
     user: {
       id: string;
+      role: Role;
       fotourl?: string | null;
     } & DefaultSession["user"] // Mantém as propriedades padrão (name, email, image)
   }
@@ -18,6 +21,7 @@ declare module "next-auth" {
    * O objeto `user` que vem do banco de dados através do `authorize`.
    */
   interface User {
+    role?: Role;
     fotourl?: string | null;
   }
 }
@@ -28,6 +32,7 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     id: string;
+    role?: Role;
     fotourl?: string | null;
   }
 }

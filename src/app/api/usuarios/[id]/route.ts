@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireSession } from '@/lib/auth-guard';
+import { requireAdmin } from '@/lib/auth-guard';
 import prisma from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
@@ -14,8 +14,10 @@ export async function PATCH(
   req: NextRequest,
   context: Context // 👈 CORREÇÃO 1: Tipagem do context
 ) {
-  const session = await requireSession();
-  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  // Atualizar usuário (reset de senha / autorização) é ação de ADMIN — este era o
+  // vetor de takeover: qualquer logado resetava a senha de qualquer conta.
+  const session = await requireAdmin();
+  if (!session) return NextResponse.json({ error: 'Acesso restrito a administradores' }, { status: 403 });
   const { params } = context
   const userId = Number(params.id);
   const body = await req.json();
