@@ -5,6 +5,7 @@ import { requireSession } from '@/lib/auth-guard';
 import sharp from 'sharp';
 import prisma from '@/lib/prisma';
 import { safeFetch, CLOUDINARY_HOSTS } from '@/lib/url-guard';
+import { escapeHtml, safeFontFamily, safeColor, num } from '@/lib/svg-safe';
 
 // --- TIPAGEM ATUALIZADA ---
 interface TextElement {
@@ -43,40 +44,6 @@ function replacePlaceholders(text: string, vaga: VagaData): string {
         .replace(/{empresa}/g, 'Sua Empresa'); // Adicione mais variáveis conforme necessário
 }
 
-function escapeHtml(unsafe: string): string {
-    return unsafe
-         .replace(/&/g, "&amp;")
-         .replace(/</g, "&lt;")
-         .replace(/>/g, "&gt;")
-         .replace(/"/g, "&quot;")
-         .replace(/'/g, "&#039;");
-}
-
-// --- SANITIZAÇÃO DE ATRIBUTOS DO SVG ---
-// Os elementos vêm do JSON do template (controlado pelo usuário). Além de escapar o
-// TEXTO, precisamos validar os ATRIBUTOS (fill, font-family, geometria) para impedir
-// que se quebre para fora do atributo e injete markup/handlers no SVG.
-const ALLOWED_FONT_FAMILIES = [
-  'Arial, sans-serif', 'Arial', 'Helvetica', 'Georgia',
-  'Times New Roman', 'Verdana', 'Courier New',
-];
-function safeFontFamily(value?: string): string {
-  return value && ALLOWED_FONT_FAMILIES.includes(value) ? value : 'Arial, sans-serif';
-}
-// Aceita hex (#rgb..#rrggbbaa), rgb()/rgba() ou nome de cor simples; senão, preto.
-function safeColor(value: unknown): string {
-  const s = String(value ?? '');
-  const ok =
-    /^#[0-9a-fA-F]{3,8}$/.test(s) ||
-    /^rgba?\(\s*[\d.,\s%]+\)$/.test(s) ||
-    /^[a-zA-Z]{1,32}$/.test(s);
-  return ok ? s : '#000000';
-}
-// Número finito ou fallback (evita NaN e injeção via atributos numéricos).
-function num(value: unknown, fallback: number): number {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : fallback;
-}
 
 // Função para calcular largura aproximada do texto (mais precisa)
 function getApproximateTextWidth(text: string, fontSize: number, fontFamily: string = 'Arial'): number {

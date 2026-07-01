@@ -14,10 +14,17 @@
 
 import { z } from 'zod';
 
-// String opcional: '' / whitespace → undefined (omitido); senão mantém a string.
+// String opcional. '' / whitespace → null (LIMPA o campo — preserva a capacidade de
+// apagar um valor no form de edição). Campo ausente permanece ausente (não é tocado no
+// update parcial). String não-vazia é mantida como veio (sem trim, p/ não alterar dado).
 const optStr = z.preprocess(
-  (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
-  z.string().optional(),
+  (v) => {
+    if (v === undefined) return undefined;
+    if (v === null) return null;
+    if (typeof v === 'string' && v.trim() === '') return null;
+    return v;
+  },
+  z.string().nullable().optional(),
 );
 
 // Data opcional. IMPORTANTE: undefined permanece undefined (campo ausente não é alterado
@@ -97,6 +104,13 @@ export const candidatoCreateSchema = z.object(candidatoShape);
 
 // Edição (PATCH): parcial — só os campos enviados são atualizados.
 export const candidatoUpdateSchema = candidatoCreateSchema.partial();
+
+// Fluxo PÚBLICO (candidato se auto-cadastrando): além do strip, remove os campos de
+// workflow interno que o candidato não pode definir (defesa em profundidade).
+export const candidatoPublicoCreateSchema = candidatoCreateSchema.omit({
+  situacaoCandidato: true,
+  observacaoCandidato: true,
+});
 
 export type CandidatoCreateInput = z.infer<typeof candidatoCreateSchema>;
 export type CandidatoUpdateInput = z.infer<typeof candidatoUpdateSchema>;

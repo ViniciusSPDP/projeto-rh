@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { uploadBase64Image } from '@/lib/minio'
-import { candidatoCreateSchema } from '@/lib/validation/candidato'
+import { candidatoPublicoCreateSchema } from '@/lib/validation/candidato'
 import { rateLimit, getClientIp, rateLimitResponse } from '@/lib/rate-limit'
 
 export async function POST(req: Request) {
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
     // Whitelist Zod: strip remove vagaId/consentimento e qualquer campo desconhecido
     // (anti mass-assignment). As datas já são coeridas pelo schema.
-    const parsed = candidatoCreateSchema.safeParse(data)
+    const parsed = candidatoPublicoCreateSchema.safeParse(data)
     if (!parsed.success) {
       return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
     }
