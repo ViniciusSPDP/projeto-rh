@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/auth-guard';
 import sharp from 'sharp';
 import prisma from '@/lib/prisma';
+import { safeFetch, CLOUDINARY_HOSTS } from '@/lib/url-guard';
 
 // --- TIPAGEM ATUALIZADA ---
 interface TextElement {
@@ -231,11 +232,18 @@ export async function GET(
         return NextResponse.json({ error: `Template com ID ${templateId} não encontrado.` }, { status: 404 });
     }
 
-    // 3. BUSCA DA IMAGEM DE FUNDO DO CLOUDINARY
-    const backgroundUrl = template.backgroundImageUrl;
-    const backgroundResponse = await fetch(backgroundUrl);
+    // 3. BUSCA DA IMAGEM DE FUNDO DO CLOUDINARY (com guard anti-SSRF)
+    // Valida em tempo de fetch também (templates antigos podem ter sido criados antes
+    // da validação na origem). safeFetch exige HTTPS + host permitido + IP público e
+    // não segue redirects.
+    let backgroundResponse: Response;
+    try {
+      backgroundResponse = await safeFetch(template.backgroundImageUrl, { allowedHosts: CLOUDINARY_HOSTS });
+    } catch {
+      return NextResponse.json({ error: 'Imagem de fundo do template é inválida.' }, { status: 400 });
+    }
     if (!backgroundResponse.ok) {
-        throw new Error(`Falha ao buscar imagem de fundo do Cloudinary. Status: ${backgroundResponse.status}`);
+        return NextResponse.json({ error: 'Falha ao carregar a imagem de fundo.' }, { status: 502 });
     }
     const backgroundImageBuffer = Buffer.from(await backgroundResponse.arrayBuffer());
 
