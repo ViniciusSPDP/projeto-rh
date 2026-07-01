@@ -1,5 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Defesa da superfície RSC / Server Actions (React2Shell): só aceita ações
+  // originadas dos domínios reais do app.
+  experimental: {
+    serverActions: {
+      allowedOrigins: ['conexaorh.s4r41va.com', 'rh.conexaodistribuidora.com.br'],
+    },
+  },
+
   // Configuração para servir arquivos estáticos
   async rewrites() {
     return [
