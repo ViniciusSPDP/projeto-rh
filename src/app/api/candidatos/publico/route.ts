@@ -1,49 +1,48 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { uploadBase64Image } from '@/lib/minio'
+import { candidatoPublicoCreateSchema } from '@/lib/validation/candidato'
+import { rateLimit, getClientIp, rateLimitResponse } from '@/lib/rate-limit'
 
 export async function POST(req: Request) {
-  const data = await req.json()
-
-  const parseDate = (value: string) => {
-    return value && value.trim() !== '' ? new Date(value) : null
-  }
-
+  // Rate limit por IP (criação pública de candidato): 5/min.
+  const rl = rateLimit('publico:' + getClientIp(req), 5, 60_000)
+  if (!rl.allowed) return rateLimitResponse(rl)
   try {
-    // Remover vagaId e consentimento antes de criar o candidato (não são campos do modelo)
-    const { vagaId, consentimento, ...dadosCandidato } = data
+    const data = await req.json()
 
-    // Consentimento LGPD obrigatório (validado no backend)
-    if (consentimento !== true) {
+    // Consentimento LGPD obrigatório (validado no backend) — lido do body cru.
+    if (data?.consentimento !== true) {
       return NextResponse.json(
         { error: 'É necessário aceitar a Política de Privacidade para enviar a candidatura.' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
-    // Foto: se vier base64/data URL, sobe pro MinIO e guarda só a KEY
-    const fotoCandidato = await uploadBase64Image(dadosCandidato.fotoCandidato, 'fotos/candidatos')
+    // Whitelist Zod: strip remove vagaId/consentimento e qualquer campo desconhecido
+    // (anti mass-assignment). As datas já são coeridas pelo schema.
+    const parsed = candidatoPublicoCreateSchema.safeParse(data)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
+    }
+    const dados = parsed.data
+
+    // Foto: se vier base64/data URL, sobe pro MinIO e guarda só a KEY.
+    const fotoCandidato = await uploadBase64Image(dados.fotoCandidato, 'fotos/candidatos')
 
     const candidato = await prisma.candidatos.create({
       data: {
-        ...dadosCandidato,
+        ...dados,
         fotoCandidato,
-        datanascimentoCandidato: parseDate(data.datanascimentoCandidato),
-        datainicioCandidato: parseDate(data.datainicioCandidato),
-        datafinalCandidato: parseDate(data.datafinalCandidato),
-        datainicio2Candidato: parseDate(data.datainicio2Candidato),
-        datafinal2Candidato: parseDate(data.datafinal2Candidato),
-        datainicio3Candidato: parseDate(data.datainicio3Candidato),
-        datafinal3Candidato: parseDate(data.datafinal3Candidato),
-        conhecimentosinformaticaCandidato: data.conhecimentosinformaticaCandidato || '',
+        conhecimentosinformaticaCandidato: dados.conhecimentosinformaticaCandidato ?? '',
       },
     })
 
-    // Vincula à vaga (tabela intermediária)
-    if (vagaId) {
+    // Vincula à vaga (tabela intermediária). vagaId vem do body cru (foi removido pelo strip).
+    if (data.vagaId) {
       await prisma.vagaCandidato.create({
         data: {
-          vagaId: vagaId,
+          vagaId: data.vagaId,
           candidatoId: candidato.idCandidato,
           etapa: 'Em processo',
         },
@@ -52,9 +51,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ...candidato,
-      idCandidato: candidato.idCandidato.toString()
+      idCandidato: candidato.idCandidato.toString(),
     })
-
   } catch (error) {
     console.error('Erro ao criar candidato:', error)
     return new NextResponse('Erro ao criar candidato.', { status: 500 })

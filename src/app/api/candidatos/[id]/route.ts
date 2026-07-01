@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireSession } from '@/lib/auth-guard';
 import prisma from '@/lib/prisma'
 import { uploadBase64Image } from '@/lib/minio'
+import { candidatoUpdateSchema } from '@/lib/validation/candidato'
 
 // Corrigido a tipagem do 'context'
 export async function PATCH(
@@ -17,35 +18,33 @@ export async function PATCH(
   }
 
   try {
-    const data = await request.json()
-
-    // Foto: se vier base64/data URL nova, sobe pro MinIO e guarda só a KEY.
-    // Se já for uma KEY (foto inalterada) ou URL, o helper mantém o valor.
-    const fotoCandidato =
-      data.fotoCandidato !== undefined
-        ? await uploadBase64Image(data.fotoCandidato, 'fotos/candidatos')
-        : undefined
-
-    // Converte as datas de string para o formato Date, se existirem
-    const parsedData = {
-      ...data,
-      ...(fotoCandidato !== undefined ? { fotoCandidato } : {}),
-      datanascimentoCandidato: data.datanascimentoCandidato ? new Date(data.datanascimentoCandidato) : null,
-      datainicioCandidato: data.datainicioCandidato ? new Date(data.datainicioCandidato) : null,
-      datafinalCandidato: data.datafinalCandidato ? new Date(data.datafinalCandidato) : null,
-      datainicio2Candidato: data.datainicio2Candidato ? new Date(data.datainicio2Candidato) : null,
-      datafinal2Candidato: data.datafinal2Candidato ? new Date(data.datafinal2Candidato) : null,
-      datainicio3Candidato: data.datainicio3Candidato ? new Date(data.datainicio3Candidato) : null,
-      datafinal3Candidato: data.datafinal3Candidato ? new Date(data.datafinal3Candidato) : null,
+    // Whitelist Zod (parcial): só campos conhecidos e enviados são atualizados
+    // (anti mass-assignment). As datas já são coeridas; campo ausente não é tocado.
+    const parsed = candidatoUpdateSchema.safeParse(await request.json())
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
     }
+    const dados = parsed.data
+
+    // Foto: só re-processa se veio no payload. O helper é idempotente para
+    // KEY/URL já existente (foto inalterada mantém o valor).
+    const fotoCandidato =
+      dados.fotoCandidato !== undefined
+        ? await uploadBase64Image(dados.fotoCandidato, 'fotos/candidatos')
+        : undefined
 
     const candidato = await prisma.candidatos.update({
       where: { idCandidato: id },
-      data: parsedData,
+      data: {
+        ...dados,
+        ...(fotoCandidato !== undefined ? { fotoCandidato } : {}),
+      },
     })
 
-    // Retorna o candidato atualizado
-    return NextResponse.json(candidato, { status: 200 })
+    return NextResponse.json(
+      { ...candidato, idCandidato: candidato.idCandidato.toString() },
+      { status: 200 },
+    )
 
   } catch (error) {
     console.error('Erro ao atualizar candidato:', error)

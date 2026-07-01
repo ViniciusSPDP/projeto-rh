@@ -1,7 +1,7 @@
 // app/api/configuracoes/whatsapp/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireSession } from '@/lib/auth-guard';
+import { requireAdmin } from '@/lib/auth-guard';
 import { promises as fs } from 'fs';
 import path from 'path';
 
@@ -23,8 +23,8 @@ async function ensureDataDir() {
 
 // GET - Buscar configurações
 export async function GET() {
-  const session = await requireSession();
-  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  const session = await requireAdmin();
+  if (!session) return NextResponse.json({ error: 'Acesso restrito a administradores' }, { status: 403 });
   try {
     // Tenta ler o arquivo.
     const data = await fs.readFile(CONFIG_FILE, 'utf-8');
@@ -47,8 +47,8 @@ export async function GET() {
 
 // POST - Salvar configurações
 export async function POST(req: NextRequest) {
-  const session = await requireSession();
-  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  const session = await requireAdmin();
+  if (!session) return NextResponse.json({ error: 'Acesso restrito a administradores' }, { status: 403 });
   try {
     const config = await req.json();
     

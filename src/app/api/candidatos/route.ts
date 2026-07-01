@@ -3,37 +3,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/auth-guard';
 import prisma from '@/lib/prisma';
-import { Prisma } from '@prisma/client'; // 1. Importando o namespace Prisma
+import { uploadBase64Image } from '@/lib/minio';
+import { candidatoCreateSchema } from '@/lib/validation/candidato';
 
 // Rota para criar um candidato manualmente (via admin)
 export async function POST(req: NextRequest) {
   const session = await requireSession();
   if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   try {
-    const body = await req.json();
-
-    // Remove campos vazios para não salvar strings vazias no banco,
-    // permitindo que o Prisma use os valores padrão ou nulos do schema.
-    const cleanBody: { [key: string]: unknown } = {}; // 2. Trocado 'any' por 'unknown'
-    for (const key in body) {
-      if (body[key] !== '' && body[key] !== null && body[key] !== undefined) {
-        cleanBody[key] = body[key];
-      }
+    // Whitelist Zod: só campos conhecidos chegam ao Prisma (anti mass-assignment).
+    const parsed = candidatoCreateSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
     }
 
+    // Foto: base64/data URL sobe pro MinIO e guarda só a KEY (helper é idempotente).
+    const fotoCandidato = await uploadBase64Image(parsed.data.fotoCandidato, 'fotos/candidatos');
+
     const novoCandidato = await prisma.candidatos.create({
-      // 3. Adicionando uma asserção de tipo para o Prisma
-      data: cleanBody as Prisma.CandidatosCreateInput,
+      data: { ...parsed.data, fotoCandidato },
     });
 
-    return NextResponse.json(novoCandidato, { status: 201 });
-  } catch (error) {
-    console.error('Erro ao criar candidato manualmente:', error);
-    // Adiciona mais detalhes do erro na resposta em caso de falha
-    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
     return NextResponse.json(
-      { error: 'Erro interno do servidor ao criar candidato.', details: errorMessage },
-      { status: 500 }
+      { ...novoCandidato, idCandidato: novoCandidato.idCandidato.toString() },
+      { status: 201 },
+    );
+  } catch (error) {
+    // Detalhe do erro só no log do servidor; nunca vaza para o cliente.
+    console.error('Erro ao criar candidato manualmente:', error);
+    return NextResponse.json(
+      { error: 'Erro interno do servidor ao criar candidato.' },
+      { status: 500 },
     );
   }
 }

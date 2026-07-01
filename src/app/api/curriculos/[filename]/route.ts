@@ -116,9 +116,13 @@ export async function HEAD(
   request: NextRequest,
   { params }: { params: { filename: string } }
 ) {
+  // Currículos são PII: o HEAD precisa da mesma checagem de sessão do GET,
+  // senão vira um oráculo de existência de arquivo sem autenticação.
+  const session = await requireSession();
+  if (!session) return new NextResponse(null, { status: 401 });
   try {
     const { filename } = params;
-    
+
     if (!isValidFilename(filename)) {
       return new NextResponse(null, { status: 400 });
     }

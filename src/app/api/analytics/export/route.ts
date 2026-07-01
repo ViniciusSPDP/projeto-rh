@@ -1,6 +1,6 @@
 // src/app/api/analytics/export/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { requireSession } from '@/lib/auth-guard';
+import { requireAdmin } from '@/lib/auth-guard';
 import prisma from '@/lib/prisma';
 
 // Definição das interfaces para tipagem forte
@@ -41,8 +41,9 @@ function convertToCSV(data: DadosParaExportCSV): string {
 
 
 export async function GET(request: NextRequest) {
-  const session = await requireSession();
-  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  // Export de analytics contém PII agregada — restrito a ADMIN.
+  const session = await requireAdmin();
+  if (!session) return NextResponse.json({ error: 'Acesso restrito a administradores' }, { status: 403 });
   try {
     const { searchParams } = new URL(request.url);
     const periodo = searchParams.get('periodo') || 'mes';
@@ -122,11 +123,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(dadosExport, { status: 200 });
 
   } catch (error) {
+    // Detalhe do erro fica só no log do servidor; nunca vaza para o cliente.
     console.error('[ANALYTICS EXPORT] Erro:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-    return NextResponse.json({
-      error: 'Erro interno do servidor',
-      details: errorMessage
-    }, { status: 500 });
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }

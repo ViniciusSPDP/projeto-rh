@@ -6,6 +6,8 @@ import prisma from '@/lib/prisma';
 import { s3Client, bucketName, ensureBucketExists } from '@/lib/minio';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
+import { rateLimit, getClientIp, rateLimitResponse } from '@/lib/rate-limit';
+import { isPdfBuffer } from '@/lib/pdf';
 
 // Interface para tipar o erro da AWS de forma segura
 interface AwsError {
@@ -14,6 +16,9 @@ interface AwsError {
 }
 
 export async function POST(req: NextRequest) {
+  // Rate limit por IP (upload público e caro): 5/min.
+  const rl = rateLimit('candidatura:' + getClientIp(req), 5, 60_000);
+  if (!rl.allowed) return rateLimitResponse(rl);
   try {
     const formData = await req.formData();
 
@@ -67,6 +72,12 @@ export async function POST(req: NextRequest) {
     // 4. Preparar o arquivo para Upload (Buffer)
     const arrayBuffer = await curriculoFile.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+
+    // 4b. Magic bytes: o conteúdo tem que começar com "%PDF-" (não confia só no
+    // mime/extensão, que são forjáveis).
+    if (!isPdfBuffer(buffer)) {
+      return NextResponse.json({ error: 'O arquivo enviado não é um PDF válido.' }, { status: 400 });
+    }
 
     // 5. Gerar nome único para o arquivo usando o telefone como base
     const sanitizedPhone = telefoneCandidato.replace(/\D/g, ''); 

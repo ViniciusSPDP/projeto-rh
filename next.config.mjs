@@ -1,5 +1,41 @@
+// CSP pragmático (enforce): script-src/style-src ficam permissivos ('unsafe-inline') para
+// não quebrar o hydration do Next nem o GTM/GA; as proteções fortes contra clickjacking/
+// plugin/base-hijack vêm de frame-ancestors 'none', object-src 'none' e base-uri 'self'.
+// Hosts liberados batem com o que o app realmente usa: Cloudinary (imagens de template),
+// viacep (busca de CEP) e Google Tag Manager / Analytics (layout.tsx).
+const csp = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "form-action 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://ssl.google-analytics.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://res.cloudinary.com https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com",
+  "font-src 'self' data:",
+  "connect-src 'self' https://viacep.com.br https://res.cloudinary.com https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com",
+  "frame-src 'self' https://www.googletagmanager.com",
+  "worker-src 'self' blob:",
+].join('; ');
+
+const securityHeaders = [
+  { key: 'Content-Security-Policy', value: csp },
+  { key: 'X-Frame-Options', value: 'DENY' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'no-referrer' },
+  { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Defesa da superfície RSC / Server Actions (React2Shell): só aceita ações
+  // originadas dos domínios reais do app.
+  experimental: {
+    serverActions: {
+      allowedOrigins: ['conexaorh.s4r41va.com', 'rh.conexaodistribuidora.com.br'],
+    },
+  },
+
   // Configuração para servir arquivos estáticos
   async rewrites() {
     return [
@@ -13,6 +49,11 @@ const nextConfig = {
   // Configuração para headers de segurança dos PDFs
   async headers() {
     return [
+      // Headers de segurança globais (CSP + hardening) em todas as rotas.
+      {
+        source: '/:path*',
+        headers: securityHeaders,
+      },
       {
         source: '/uploads/curriculos/:path*',
         headers: [
